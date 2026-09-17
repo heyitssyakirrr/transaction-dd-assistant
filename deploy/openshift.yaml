@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-dd-assistant
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: transaction-dd-assistant
+  template:
+    metadata:
+      labels:
+        app: transaction-dd-assistant
+    spec:
+      containers:
+        - name: api
+          image: REPLACE_WITH_INTERNAL_REGISTRY/transaction-dd-assistant:0.1.0
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: transaction-dd-assistant-config
+            - secretRef:
+                name: transaction-dd-assistant-secret
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: "1", memory: 1Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transaction-dd-assistant
+spec:
+  selector:
+    app: transaction-dd-assistant
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: transaction-dd-assistant-config
+data:
+  LLM_BASE_URL: "http://REPLACE_WITH_INTERNAL_LLM_SERVICE:8000/v1"
+  LLM_CHAT_PATH: "/chat/completions"
+  LLM_MODEL: "qwen2.5-vl-7b-instruct"
+  LLM_TIMEOUT_SECONDS: "120"
+  MAX_PROMPT_TOKENS: "18000"
+  MAX_ROWS_PER_CHUNK: "250"
+  MAX_RESPONSE_TOKENS: "2500"
+  REQUIRE_HUMAN_REVIEW: "true"
