@@ -50,7 +50,7 @@ class AnalysisService:
         final = self._llm.complete_json(
             system_prompt=ANALYST_SYSTEM_PROMPT,
             user_payload=statement_payload(
-                request.customer_context.model_dump(mode="json"),
+                request.source_filename,
                 profile,
                 compact_rows,
             ),

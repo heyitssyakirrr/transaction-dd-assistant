@@ -8,7 +8,6 @@ from typing import Any
 
 from app.core.models import (
     AnalyzeTransactionsRequest,
-    CustomerContext,
     TransactionColumnMapping,
 )
 
@@ -115,16 +114,7 @@ def build_request_from_csv(
 
     return AnalyzeTransactionsRequest(
         case_id=generated_case_id,
-        customer_context=CustomerContext(
-            customer_id=f"Derived from file: {filename}",
-            extra={
-                "source_file": filename,
-                "analysis_scope": (
-                    "Transaction-only analysis. No occupation, income, "
-                    "or external customer profile was supplied."
-                ),
-            },
-        ),
+        source_filename=filename,
         column_mapping=TransactionColumnMapping(
             transaction_id="_generated_transaction_id",
             timestamp=mapping["timestamp"],

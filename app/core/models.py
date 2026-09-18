@@ -7,15 +7,6 @@ from typing import Any, Literal, Protocol
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class CustomerContext(BaseModel):
-    customer_id: str
-    occupation: str | None = None
-    declared_monthly_income: Decimal | None = Field(default=None, ge=0)
-    currency: str | None = None
-    risk_rating: str | None = None
-    extra: dict[str, Any] = Field(default_factory=dict)
-
-
 class TransactionColumnMapping(BaseModel):
     transaction_id: str
     timestamp: str
@@ -31,9 +22,12 @@ class TransactionColumnMapping(BaseModel):
 
 class AnalyzeTransactionsRequest(BaseModel):
     case_id: str = Field(min_length=1, max_length=128)
-    customer_context: CustomerContext
+    source_filename: str = Field(min_length=1, max_length=255)
     column_mapping: TransactionColumnMapping
-    transactions: list[dict[str, Any]] = Field(min_length=1, max_length=10_000)
+    transactions: list[dict[str, Any]] = Field(
+        min_length=1,
+        max_length=10_000,
+    )
 
 
 class NormalizedTransaction(BaseModel):
