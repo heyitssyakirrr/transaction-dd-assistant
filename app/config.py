@@ -5,7 +5,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-def _load_dotenv(path: str = ".env") -> None:
+BASE_DIR = Path(__file__).resolve().parent
+
+
+def _load_dotenv(path: Path) -> None:
     """Small dependency-free dotenv loader; existing environment wins."""
     env_path = Path(path)
     if not env_path.exists():
@@ -18,7 +21,7 @@ def _load_dotenv(path: str = ".env") -> None:
         os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
-_load_dotenv()
+_load_dotenv(BASE_DIR / ".env")
 
 
 @dataclass(frozen=True)
@@ -28,10 +31,12 @@ class Settings:
     llm_model: str = os.getenv("LLM_MODEL", "qwen2.5-vl-7b-instruct")
     llm_api_key: str = os.getenv("LLM_API_KEY", "")
     llm_api_key_header: str = os.getenv("LLM_API_KEY_HEADER", "Authorization")
-    llm_timeout_seconds: int = int(os.getenv("LLM_TIMEOUT_SECONDS", "120"))
-    max_prompt_tokens: int = int(os.getenv("MAX_PROMPT_TOKENS", "18000"))
-    max_rows_per_chunk: int = int(os.getenv("MAX_ROWS_PER_CHUNK", "250"))
-    max_response_tokens: int = int(os.getenv("MAX_RESPONSE_TOKENS", "2500"))
+    llm_timeout_seconds: int = int(os.getenv("LLM_TIMEOUT_SECONDS", "180"))
+    llm_concurrency: int = int(os.getenv("LLM_CONCURRENCY", "3"))
+    chunk_size: int = int(os.getenv("CHUNK_SIZE", "300"))
+    max_target_chunks: int = int(os.getenv("MAX_TARGET_CHUNKS", "6"))
+    max_target_chunks_per_review: int = int(os.getenv("MAX_TARGET_CHUNKS_PER_REVIEW", "2"))
+    max_response_tokens: int = int(os.getenv("MAX_RESPONSE_TOKENS", "2200"))
     require_human_review: bool = os.getenv("REQUIRE_HUMAN_REVIEW", "true").lower() == "true"
 
     @property

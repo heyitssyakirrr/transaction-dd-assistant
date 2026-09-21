@@ -47,10 +47,10 @@ function renderResult(data) {
     data.transactions_processed.toLocaleString();
 
   document.querySelector("#credit-total").textContent =
-    data.profile.credits.total;
+    data.chunks_processed.toLocaleString();
 
   document.querySelector("#debit-total").textContent =
-    data.profile.debits.total;
+    data.risk_level.toUpperCase();
 
   const findings = document.querySelector("#findings");
   findings.innerHTML = "";
@@ -72,6 +72,10 @@ function renderResult(data) {
     `);
   });
 
+  if (!data.findings.length) {
+    findings.innerHTML = "<p class='muted'>No material finding with verified transaction evidence was returned.</p>";
+  }
+
   const links = `
     <p class="report-links">
       <a href="${data.report_html}" target="_blank">Open saved report</a>
@@ -80,6 +84,12 @@ function renderResult(data) {
   `;
 
   findings.insertAdjacentHTML("beforeend", links);
+  const limitations = document.querySelector("#limitations");
+  limitations.innerHTML = data.limitations
+    .map((item) => `<li>${escapeHtml(item)}</li>`)
+    .join("");
+  document.querySelector("#result-status").textContent =
+    `${data.transactions_processed.toLocaleString()} transactions reviewed across ${data.chunks_processed} LLM segments.`;
   document.querySelector("#result").classList.remove("hidden");
 }
 

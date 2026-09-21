@@ -50,13 +50,40 @@ class EvidenceItem(BaseModel):
 
 
 class Finding(BaseModel):
-    finding_id: str
+    finding_id: str = ""
     category: str
     severity: Literal["low", "medium", "high", "critical"]
     confidence: float = Field(ge=0, le=1)
     rationale: str
     evidence: list[EvidenceItem] = Field(default_factory=list)
-    follow_up_questions: list[str] = Field(default_factory=list)
+
+
+class ChunkReport(BaseModel):
+    chunk_id: int = Field(ge=1)
+    material_activity_summary: str = Field(min_length=1, max_length=1_400)
+    findings: list[Finding] = Field(default_factory=list, max_length=8)
+    entities_of_interest: list[str] = Field(default_factory=list, max_length=20)
+    cross_chunk_review_needed: bool
+
+
+class CaseHypothesis(BaseModel):
+    hypothesis_id: str = Field(min_length=1, max_length=40)
+    pattern: str = Field(min_length=1, max_length=500)
+    severity: Literal["low", "medium", "high", "critical"]
+    related_chunk_ids: list[int] = Field(min_length=1, max_length=6)
+    rationale: str = Field(min_length=1, max_length=900)
+
+
+class CaseSynthesis(BaseModel):
+    whole_statement_summary: str = Field(min_length=1, max_length=1_800)
+    case_hypotheses: list[CaseHypothesis] = Field(default_factory=list, max_length=10)
+    selected_chunk_ids: list[int] = Field(default_factory=list, max_length=6)
+    limitations: list[str] = Field(default_factory=list, max_length=8)
+
+
+class EvidenceReview(BaseModel):
+    verified_findings: list[Finding] = Field(default_factory=list, max_length=10)
+    disproved_or_uncertain_hypotheses: list[str] = Field(default_factory=list, max_length=10)
 
 
 class AnalysisResult(BaseModel):
@@ -70,10 +97,10 @@ class AnalysisResult(BaseModel):
     limitations: list[str] = Field(default_factory=list)
     transactions_processed: int
     chunks_processed: int
-    profile: dict[str, Any]
+    risk_level: Literal["low", "medium", "high"]
     generated_at: datetime
 
 
 class LlmClient(Protocol):
-    def complete_json(self, *, system_prompt: str, user_payload: dict[str, Any]) -> dict[str, Any]: ...
+    async def complete_json(self, *, system_prompt: str, user_payload: dict[str, Any]) -> dict[str, Any]: ...
 

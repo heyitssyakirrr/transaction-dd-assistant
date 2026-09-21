@@ -4,10 +4,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from app.adapters.llm_client import LlmServiceError
-from app.core.analysis_service import (
-    AnalysisService,
-    StatementTooLargeError,
-)
+from app.core.analysis_service import AnalysisService, ModelOutputError
 from app.core.auto_csv import CsvSchemaError, build_request_from_csv
 from app.core.report_store import ReportStore
 from app.core.transaction_adapter import TransactionValidationError
@@ -30,7 +27,7 @@ def build_router(
         try:
             content = (await file.read()).decode("utf-8-sig")
             request = build_request_from_csv(content, file.filename or "statement.csv")
-            result = service.analyze_transactions(request)
+            result = await service.analyze_transactions(request)
             saved = report_store.save(result)
             return {
                 **result.model_dump(mode="json"),
@@ -46,8 +43,8 @@ def build_router(
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         except TransactionValidationError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
-        except StatementTooLargeError as exc:
-            raise HTTPException(status_code=413, detail=str(exc)) from exc
+        except ModelOutputError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
         except LlmServiceError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 

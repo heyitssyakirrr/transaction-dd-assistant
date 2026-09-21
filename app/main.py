@@ -15,10 +15,8 @@ BASE_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = BASE_DIR.parent
 
 settings = Settings()
-service = AnalysisService(
-    OpenAICompatibleClient(settings),
-    settings,
-)
+llm_client = OpenAICompatibleClient(settings)
+service = AnalysisService(llm_client, settings)
 
 report_store = ReportStore(PROJECT_DIR / "data" / "reports")
 
@@ -44,6 +42,11 @@ def workspace() -> FileResponse:
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok", "model": settings.llm_model}
+
+
+@app.on_event("shutdown")
+async def close_llm_client() -> None:
+    await llm_client.close()
 
 
 if __name__ == "__main__":

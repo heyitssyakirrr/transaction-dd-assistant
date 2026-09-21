@@ -21,8 +21,8 @@
       <p class="eyebrow">Transaction review</p>
       <h1>Customer statement assessment</h1>
       <p>
-        Upload a CSV statement, map its columns, and submit the complete
-        statement to the internal LLM service for review.
+        Upload one customer statement. The system detects common transaction
+        columns and performs an evidence-led AML review.
       </p>
     </section>
 
@@ -63,7 +63,7 @@
 
         <div id="loading" class="loading hidden">
           <span></span>
-          Analysing complete statement with the internal LLM service…
+          Analysing transaction segments and verifying material evidence…
         </div>
 
         <div id="error" class="error hidden"></div>
@@ -77,8 +77,8 @@
 
           <div class="metric-grid">
             <div><span>Transactions</span><strong id="transaction-count"></strong></div>
-            <div><span>Credits</span><strong id="credit-total"></strong></div>
-            <div><span>Debits</span><strong id="debit-total"></strong></div>
+            <div><span>LLM segments</span><strong id="credit-total"></strong></div>
+            <div><span>Risk level</span><strong id="debit-total"></strong></div>
           </div>
 
           <section class="result-section">

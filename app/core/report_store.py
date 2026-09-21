@@ -90,11 +90,12 @@ small {{ color: #627d98; }}
   <small>Case: {html.escape(result.case_id)}</small>
 </header>
 <section class="decision">
-  <h2>Recommendation: {html.escape(result.decision.replace("_", " ").title())}</h2>
+  <h2>Recommendation: {html.escape(result.decision.replace("_", " ").title())} ({html.escape(result.risk_level.title())} risk)</h2>
   <p>{html.escape(result.decision_rationale)}</p>
 </section>
 <h2>Executive summary</h2>
 <p>{html.escape(result.executive_summary)}</p>
+<p><small>{result.transactions_processed} transactions reviewed across {result.chunks_processed} LLM segments.</small></p>
 <h2>Material findings</h2>
 {findings}
 <h2>Limitations</h2>
