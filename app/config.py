@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 def _load_dotenv(path: Path) -> None:
@@ -26,9 +26,9 @@ _load_dotenv(BASE_DIR / ".env")
 
 @dataclass(frozen=True)
 class Settings:
-    llm_base_url: str = os.getenv("LLM_BASE_URL", "http://localhost:8000/v1")
-    llm_chat_path: str = os.getenv("LLM_CHAT_PATH", "/chat/completions")
-    llm_model: str = os.getenv("LLM_MODEL", "qwen2.5-vl-7b-instruct")
+    llm_base_url: str = os.getenv("LLM_BASE_URL", "")
+    llm_chat_path: str = os.getenv("LLM_CHAT_PATH", "")
+    llm_model: str = os.getenv("LLM_MODEL", "auto")
     llm_api_key: str = os.getenv("LLM_API_KEY", "")
     llm_api_key_header: str = os.getenv("LLM_API_KEY_HEADER", "Authorization")
     llm_timeout_seconds: int = int(os.getenv("LLM_TIMEOUT_SECONDS", "180"))
