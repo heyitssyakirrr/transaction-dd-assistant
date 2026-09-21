@@ -1,7 +1,8 @@
+import logging
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.adapters.llm_client import OpenAICompatibleClient
@@ -10,11 +11,31 @@ from app.config import Settings
 from app.core.analysis_service import AnalysisService
 from app.core.report_store import ReportStore
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+logger = logging.getLogger("app.main")
 
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = BASE_DIR.parent
 
 settings = Settings()
+
+if not settings.llm_base_url:
+    logger.warning(
+        "LLM_BASE_URL is not set. Copy .env.example to '.env' in the project "
+        "root (next to Dockerfile/README.md, not inside app/) and set your "
+        "loader's URL before analysing statements."
+    )
+else:
+    logger.info(
+        "LLM loader configured: %s (model=%s, concurrency=%s)",
+        settings.chat_url,
+        settings.llm_model,
+        settings.llm_concurrency,
+    )
+
 llm_client = OpenAICompatibleClient(settings)
 service = AnalysisService(llm_client, settings)
 
@@ -40,8 +61,21 @@ def workspace() -> FileResponse:
 
 
 @app.get("/healthz")
-def healthz() -> dict[str, str]:
-    return {"status": "ok", "model": settings.llm_model}
+def healthz() -> dict[str, object]:
+    return {
+        "status": "ok",
+        "model": settings.llm_model,
+        "llm_configured": bool(settings.llm_base_url),
+    }
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An unexpected error occurred. Please try again or contact support."},
+    )
 
 
 @app.on_event("shutdown")

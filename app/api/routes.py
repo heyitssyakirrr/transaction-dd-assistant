@@ -1,3 +1,5 @@
+import logging
+import time
 from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -8,6 +10,12 @@ from app.core.analysis_service import AnalysisService, ModelOutputError
 from app.core.auto_csv import CsvSchemaError, build_request_from_csv
 from app.core.report_store import ReportStore
 from app.core.transaction_adapter import TransactionValidationError
+
+logger = logging.getLogger("app.api")
+
+# Generous enough for a real customer statement, small enough to fail fast
+# before it reaches the LLM chunking pipeline.
+_MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 
 
 def build_router(
@@ -24,11 +32,31 @@ def build_router(
                 detail="Please upload a CSV bank transaction statement.",
             )
 
+        raw = await file.read()
+        if len(raw) > _MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail="The CSV exceeds the 15 MB upload limit for this workspace.",
+            )
+
+        started_at = time.monotonic()
+        case_id = "unknown"
         try:
-            content = (await file.read()).decode("utf-8-sig")
+            content = raw.decode("utf-8-sig")
             request = build_request_from_csv(content, file.filename or "statement.csv")
+            case_id = request.case_id
+            logger.info("Starting analysis: case=%s rows=%s", case_id, len(request.transactions))
+
             result = await service.analyze_transactions(request)
             saved = report_store.save(result)
+
+            logger.info(
+                "Analysis complete: case=%s decision=%s risk=%s duration=%.1fs",
+                case_id,
+                result.decision,
+                result.risk_level,
+                time.monotonic() - started_at,
+            )
             return {
                 **result.model_dump(mode="json"),
                 "report_html": f"/v1/transactions/reports/{saved.html_name}",
@@ -44,8 +72,10 @@ def build_router(
         except TransactionValidationError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         except ModelOutputError as exc:
+            logger.error("Model output did not match schema: case=%s error=%s", case_id, exc)
             raise HTTPException(status_code=502, detail=str(exc)) from exc
         except LlmServiceError as exc:
+            logger.error("LLM service call failed: case=%s error=%s", case_id, exc)
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     @router.get("/reports/{report_name}")

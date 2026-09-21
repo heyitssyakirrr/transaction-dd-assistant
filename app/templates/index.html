@@ -40,10 +40,13 @@
             </p>
         </div>
 
-        <label class="file-field">
-            Bank transaction CSV
+        <label id="file-field" class="file-field" for="file">
+            <span class="file-field-title">Bank transaction CSV</span>
+            <span class="file-field-drop">
+              <span id="file-name" class="file-field-name">Drag a file here or click to browse</span>
+              <span class="file-field-hint">.csv up to 15 MB</span>
+            </span>
             <input id="file" type="file" accept=".csv,text/csv" required>
-            <span id="file-name">No file selected</span>
         </label>
 
         <p class="upload-note">
@@ -52,7 +55,7 @@
         </p>
 
         <button id="submit-button" type="submit">
-            Analyse statement
+            <span id="submit-button-label">Analyse statement</span>
         </button>
     </form>
       <section class="card result-card" aria-live="polite">
@@ -62,23 +65,32 @@
         </div>
 
         <div id="loading" class="loading hidden">
-          <span></span>
-          Analysing transaction segments and verifying material evidence…
+          <span class="spinner" aria-hidden="true"></span>
+          <span>Analysing transaction segments and verifying material evidence…</span>
         </div>
 
-        <div id="error" class="error hidden"></div>
+        <div id="error" class="error hidden" role="alert"></div>
+
+        <div id="empty-state" class="empty-state">
+          <p>No assessment yet. Upload a statement on the left to run a review.</p>
+        </div>
 
         <div id="result" class="hidden">
           <div class="decision-panel">
-            <p class="eyebrow">Recommendation</p>
-            <h3 id="decision"></h3>
+            <div class="decision-panel-head">
+              <div>
+                <p class="eyebrow">Recommendation</p>
+                <h3 id="decision"></h3>
+              </div>
+              <span id="risk-badge" class="risk-badge"></span>
+            </div>
             <p id="decision-rationale"></p>
           </div>
 
           <div class="metric-grid">
-            <div><span>Transactions</span><strong id="transaction-count"></strong></div>
-            <div><span>LLM segments</span><strong id="credit-total"></strong></div>
-            <div><span>Risk level</span><strong id="debit-total"></strong></div>
+            <div><span>Transactions reviewed</span><strong id="transaction-count"></strong></div>
+            <div><span>LLM segments</span><strong id="segments-count"></strong></div>
+            <div><span>Overall risk level</span><strong id="risk-level"></strong></div>
           </div>
 
           <section class="result-section">
@@ -87,13 +99,25 @@
           </section>
 
           <section class="result-section">
-            <h3>Material findings</h3>
+            <div class="result-section-head">
+              <h3>Material findings</h3>
+              <span id="findings-count" class="findings-count"></span>
+            </div>
             <div id="findings"></div>
           </section>
 
           <section class="result-section">
             <h3>Limitations and reviewer note</h3>
             <ul id="limitations"></ul>
+          </section>
+
+          <section class="result-section report-links">
+            <a id="report-html-link" href="#" target="_blank" rel="noopener" class="report-link">
+              Open full report
+            </a>
+            <a id="report-json-link" href="#" target="_blank" rel="noopener" class="report-link report-link-secondary">
+              Download JSON
+            </a>
           </section>
         </div>
       </section>

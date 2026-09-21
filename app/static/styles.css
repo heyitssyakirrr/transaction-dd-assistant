@@ -114,7 +114,10 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 5px;
   box-shadow: 0 2px 8px rgba(16, 42, 67, .05);
+  transition: box-shadow .2s ease;
 }
+
+.card:hover { box-shadow: 0 4px 14px rgba(16, 42, 67, .08); }
 
 .form-card { padding: 30px; }
 .result-card { padding: 30px; min-height: 440px; }
@@ -168,18 +171,66 @@ input:focus, select:focus {
 }
 
 .file-field {
+  position: relative;
+  display: block;
   margin: 18px 0;
   padding: 15px;
   border: 1px dashed #9fb3c8;
+  border-radius: 4px;
   background: #f8fbfd;
+  cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease;
 }
 
-.file-field input { margin-top: 4px; }
+.file-field:hover { border-color: var(--red); }
 
-#file-name {
+.file-field.is-dragging {
+  border-color: var(--red);
+  background: #fff2f2;
+}
+
+.file-field-title {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.file-field-drop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.file-field-name {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.file-field-hint {
+  flex-shrink: 0;
+  color: #9fb3c8;
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+/* The native input sits over the whole label but stays invisible; the
+   label's own text/icon carries the visual design. */
+.file-field input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .mappings { margin-top: 18px; }
@@ -206,8 +257,29 @@ button:disabled { cursor: wait; opacity: .7; }
   padding: 17px;
 }
 
-.decision-panel h3 { margin: 0; font-size: 22px; }
+.decision-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.decision-panel h3 { margin: 4px 0 0; font-size: 22px; }
 .decision-panel p:last-child { margin-bottom: 0; }
+
+.risk-badge {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+
+.risk-badge.risk-low { color: var(--success); background: #e8f5ee; }
+.risk-badge.risk-medium { color: var(--warning); background: #fff6db; }
+.risk-badge.risk-high { color: var(--danger); background: #fff0ef; }
 
 .metric-grid {
   display: grid;
@@ -244,6 +316,21 @@ button:disabled { cursor: wait; opacity: .7; }
 
 .result-section h3 { margin: 0 0 10px; font-size: 17px; }
 
+.result-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.result-section-head h3 { margin: 0; }
+
+.findings-count {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
 .finding {
   margin-top: 12px;
   padding: 16px;
@@ -259,9 +346,26 @@ button:disabled { cursor: wait; opacity: .7; }
 }
 
 .finding h4 { margin: 0; }
-.finding h5 { margin: 16px 0 5px; font-size: 13px; }
+.finding h5 { margin: 16px 0 5px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
 .finding p, .finding ul { font-size: 14px; }
-.finding ul { margin: 0; padding-left: 18px; }
+.finding ul { margin: 0; padding-left: 0; list-style: none; }
+
+.finding ul li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+
+.finding ul li:first-child { border-top: 0; }
+
+.finding .confidence {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
 
 .severity {
   padding: 3px 8px;
@@ -282,20 +386,68 @@ button:disabled { cursor: wait; opacity: .7; }
   font-weight: 700;
 }
 
-.loading {
-  margin-top: 32px;
-  color: var(--muted);
+.empty-state {
+  margin-top: 48px;
+  padding: 32px 0;
+  text-align: center;
 }
 
-.loading span {
+.empty-state p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  margin-top: 32px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.spinner {
   display: inline-block;
-  width: 12px;
-  height: 12px;
-  margin-right: 8px;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  margin-right: 10px;
   border: 2px solid #bcccdc;
   border-top-color: var(--red);
   border-radius: 50%;
   animation: spin .7s linear infinite;
+}
+
+.report-links {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.report-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 14px;
+  border-radius: 3px;
+  background: var(--red);
+  color: white;
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+  transition: background-color .15s ease;
+}
+
+.report-link:hover { background: var(--red-dark); }
+
+.report-link-secondary {
+  background: transparent;
+  color: var(--navy);
+  border: 1px solid var(--line);
+}
+
+.report-link-secondary:hover {
+  background: var(--canvas);
+  color: var(--navy-dark);
 }
 
 .error {
@@ -307,7 +459,10 @@ button:disabled { cursor: wait; opacity: .7; }
 }
 
 .muted { color: var(--muted); }
-.hidden { display: none; }
+/* !important is deliberate: .hidden is a state utility applied alongside
+   other display-setting classes (.loading, .error, .empty-state), and must
+   always win regardless of where those rules sit in the stylesheet. */
+.hidden { display: none !important; }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
