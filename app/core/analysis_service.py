@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Awaitable
 from datetime import datetime, timezone
 from typing import Literal, TypeVar
 from uuid import uuid4
@@ -12,6 +13,7 @@ from app.core.models import AnalysisResult, AnalyzeTransactionsRequest, CaseSynt
 from app.core.prompts import ANALYST_SYSTEM_PROMPT, chunk_payload, evidence_payload, final_payload, synthesis_payload
 from app.core.transaction_adapter import normalize_transactions
 from app.core.transaction_view import compact_row
+from app.core.llm_work_queue import LlmWorkQueue
 
 
 class ModelOutputError(ValueError):
@@ -28,31 +30,32 @@ class AnalysisService:
     does not calculate an AML score, detect anomalies or write a summary.
     """
 
-    def __init__(self, llm: LlmClient, settings: Settings) -> None:
+    def __init__(self, llm: LlmClient, settings: Settings, llm_queue: LlmWorkQueue) -> None:
         self._llm = llm
         self._settings = settings
-        # main.py creates this once, so the limit is global across all uploads.
-        self._semaphore = asyncio.Semaphore(settings.llm_concurrency)
+        self._llm_queue = llm_queue
 
     async def analyze_transactions(self, request: AnalyzeTransactionsRequest) -> AnalysisResult:
         normalized = normalize_transactions(request.transactions, request.column_mapping)
         rows = [compact_row(row) for row in normalized]
         chunks = self._split(rows)
 
-        reports = await asyncio.gather(*[
-            self._review_chunk(index + 1, len(chunks), chunk)
+        reports = await self._gather_or_cancel([
+            self._review_chunk(request.case_id, index + 1, len(chunks), chunk)
             for index, chunk in enumerate(chunks)
-        ])
+        ], max_in_flight=self._settings.llm_concurrency)
         synthesis = await self._ask(
+            request.case_id, "synthesis",
             synthesis_payload([report.model_dump(mode="json") for report in reports], self._settings.max_target_chunks),
             CaseSynthesis,
         )
         selected = self._valid_chunk_ids(synthesis.selected_chunk_ids, len(chunks))
-        reviews = await asyncio.gather(*[
-            self._verify_evidence(synthesis, group, chunks)
+        reviews = await self._gather_or_cancel([
+            self._verify_evidence(request.case_id, synthesis, group, chunks)
             for group in self._groups(selected, self._settings.max_target_chunks_per_review)
-        ])
+        ], max_in_flight=self._settings.llm_concurrency)
         final = await self._ask(
+            request.case_id, "final",
             final_payload(synthesis.model_dump(mode="json"), [review.model_dump(mode="json") for review in reviews]),
             _FinalOutput,
         )
@@ -88,23 +91,25 @@ class AnalysisService:
             generated_at=datetime.now(timezone.utc),
         )
 
-    async def _review_chunk(self, chunk_id: int, total: int, chunk: list[dict[str, object]]) -> ChunkReport:
-        report = await self._ask(chunk_payload(chunk_id, total, chunk), ChunkReport)
+    async def _review_chunk(self, case_id: str, chunk_id: int, total: int, chunk: list[dict[str, object]]) -> ChunkReport:
+        report = await self._ask(case_id, f"chunk-{chunk_id}-of-{total}", chunk_payload(chunk_id, total, chunk), ChunkReport)
         report.chunk_id = chunk_id
-        report.findings = self._validated_findings(report.findings, {str(row["id"]) for row in chunk})
+        report.findings = self._validated_findings(report.findings, {str(row["transaction_id"]) for row in chunk})
         return report
 
-    async def _verify_evidence(self, synthesis: CaseSynthesis, chunk_ids: list[int], chunks: list[list[dict[str, object]]]) -> EvidenceReview:
+    async def _verify_evidence(self, case_id: str, synthesis: CaseSynthesis, chunk_ids: list[int], chunks: list[list[dict[str, object]]]) -> EvidenceReview:
         hypotheses = [item.model_dump(mode="json") for item in synthesis.case_hypotheses if set(item.related_chunk_ids).intersection(chunk_ids)]
         raw_chunks = [{"chunk_id": chunk_id, "transactions": chunks[chunk_id - 1]} for chunk_id in chunk_ids]
-        review = await self._ask(evidence_payload(hypotheses, raw_chunks), EvidenceReview)
-        valid_ids = {str(row["id"]) for raw_chunk in raw_chunks for row in raw_chunk["transactions"]}
+        review = await self._ask(case_id, f"evidence-chunks-{'-'.join(map(str, chunk_ids))}", evidence_payload(hypotheses, raw_chunks), EvidenceReview)
+        valid_ids = {str(row["transaction_id"]) for raw_chunk in raw_chunks for row in raw_chunk["transactions"]}
         review.verified_findings = self._validated_findings(review.verified_findings, valid_ids)
         return review
 
-    async def _ask(self, payload: dict[str, object], model: type[ModelType]) -> ModelType:
-        async with self._semaphore:
-            raw = await self._llm.complete_json(system_prompt=ANALYST_SYSTEM_PROMPT, user_payload=payload)
+    async def _ask(self, case_id: str, stage: str, payload: dict[str, object], model: type[ModelType]) -> ModelType:
+        raw = await self._llm_queue.submit(
+            name=f"case={case_id} stage={stage}",
+            operation=lambda: self._llm.complete_json(system_prompt=ANALYST_SYSTEM_PROMPT, user_payload=payload),
+        )
         try:
             return model.model_validate(raw)
         except ValidationError as exc:
@@ -125,6 +130,32 @@ class AnalysisService:
     @staticmethod
     def _groups(values: list[int], size: int) -> list[list[int]]:
         return [values[index:index + size] for index in range(0, len(values), size)]
+
+    @staticmethod
+    async def _gather_or_cancel(
+        awaitables: list[Awaitable[ModelType]], *, max_in_flight: int
+    ) -> list[ModelType]:
+        """Run a stage with bounded fan-out and cancel it if one job fails.
+
+        A large statement submits only a few chunks at a time rather than
+        filling the shared queue ahead of other customer cases. This preserves
+        capacity for independently submitted work while the global queue still
+        enforces the absolute LLM limit.
+        """
+        semaphore = asyncio.Semaphore(max_in_flight)
+
+        async def guarded(item: Awaitable[ModelType]) -> ModelType:
+            async with semaphore:
+                return await item
+
+        tasks = [asyncio.create_task(guarded(item)) for item in awaitables]
+        try:
+            return await asyncio.gather(*tasks)
+        except BaseException:
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            raise
 
     @staticmethod
     def _validated_findings(findings: list[Finding], allowed_ids: set[str]) -> list[Finding]:

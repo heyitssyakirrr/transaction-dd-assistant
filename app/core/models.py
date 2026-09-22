@@ -32,7 +32,7 @@ class AnalyzeTransactionsRequest(BaseModel):
 
 class NormalizedTransaction(BaseModel):
     model_config = ConfigDict(frozen=True)
-    transaction_id: str
+    transaction_id: str = Field(min_length=1, max_length=128)
     timestamp: datetime
     amount: Decimal = Field(ge=0)
     direction: Literal["credit", "debit"]
@@ -103,4 +103,3 @@ class AnalysisResult(BaseModel):
 
 class LlmClient(Protocol):
     async def complete_json(self, *, system_prompt: str, user_payload: dict[str, Any]) -> dict[str, Any]: ...
-

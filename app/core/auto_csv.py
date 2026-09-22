@@ -4,6 +4,7 @@ import csv
 import io
 import re
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from app.core.models import (
@@ -76,8 +77,20 @@ ALIASES = {
         "beneficiary",
         "sender",
         "recipient",
-        "merchant",
         "payee",
+    ],
+    "channel": [
+        "channel",
+        "transaction channel",
+        "payment channel",
+        "delivery channel",
+    ],
+    "merchant_category": [
+        "merchant",
+        "merchant category",
+        "merchant_category",
+        "mcc",
+        "merchant type",
     ],
     "balance": [
         "balance",
@@ -117,12 +130,14 @@ def build_request_from_csv(
         source_filename=filename,
         column_mapping=TransactionColumnMapping(
             transaction_id="_generated_transaction_id",
-            timestamp=mapping["timestamp"],
+            timestamp="_normalized_timestamp",
             amount="_generated_amount",
             direction="_generated_direction",
             currency=mapping.get("currency"),
             counterparty=mapping.get("counterparty"),
             description=mapping.get("description"),
+            channel=mapping.get("channel"),
+            merchant_category=mapping.get("merchant_category"),
             balance=mapping.get("balance"),
         ),
         transactions=normalized_rows,
@@ -169,6 +184,11 @@ def _prepare_rows(
         if amount is None:
             continue
 
+        try:
+            timestamp = _normalise_timestamp(row.get(mapping["timestamp"], ""))
+        except ValueError as exc:
+            raise CsvSchemaError(f"Row {index}: {exc}") from exc
+
         prepared.append(
             {
                 **row,
@@ -178,6 +198,7 @@ def _prepare_rows(
                 ),
                 "_generated_amount": amount,
                 "_generated_direction": direction,
+                "_normalized_timestamp": timestamp,
             }
         )
 
@@ -220,18 +241,51 @@ def _derive_amount_and_direction(
     return str(amount), "debit"
 
 
-def _parse_number(value: Any) -> float | None:
+def _parse_number(value: Any) -> Decimal | None:
     text = str(value).strip()
 
     if not text:
         return None
 
+    negative = text.startswith("(") and text.endswith(")")
     cleaned = re.sub(r"[^0-9.-]", "", text)
 
     try:
-        return float(cleaned)
-    except ValueError:
+        parsed = Decimal(cleaned)
+        return -parsed if negative else parsed
+    except (InvalidOperation, ValueError):
         return None
+
+
+def _normalise_timestamp(value: Any) -> str:
+    """Convert common bank-statement dates to an unambiguous ISO timestamp.
+
+    Day-first forms are deliberate: they are the convention for this service's
+    banking statements. Source systems should emit ISO-8601 where possible.
+    """
+    text = str(value).strip()
+    if not text:
+        raise ValueError("missing transaction date")
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).isoformat()
+    except ValueError:
+        pass
+
+    formats = (
+        "%d/%m/%Y",
+        "%d/%m/%y",
+        "%d/%m/%Y %H:%M",
+        "%d/%m/%Y %H:%M:%S",
+        "%d-%m-%Y",
+        "%d-%m-%Y %H:%M",
+        "%Y/%m/%d",
+    )
+    for date_format in formats:
+        try:
+            return datetime.strptime(text, date_format).isoformat()
+        except ValueError:
+            continue
+    raise ValueError(f"unsupported transaction date '{value}'; use ISO-8601 or DD/MM/YYYY")
 
 
 def _normalise_header(header: str) -> str:

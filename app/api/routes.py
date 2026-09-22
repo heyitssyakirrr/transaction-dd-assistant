@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 from pathlib import Path
@@ -5,8 +6,9 @@ from pathlib import Path
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
-from app.adapters.llm_client import LlmServiceError
+from app.adapters.llm_client import LlmContextWindowError, LlmServiceError
 from app.core.analysis_service import AnalysisService, ModelOutputError
+from app.core.llm_work_queue import LlmQueueClosedError, LlmQueueFullError
 from app.core.auto_csv import CsvSchemaError, build_request_from_csv
 from app.core.report_store import ReportStore
 from app.core.transaction_adapter import TransactionValidationError
@@ -48,7 +50,9 @@ def build_router(
             logger.info("Starting analysis: case=%s rows=%s", case_id, len(request.transactions))
 
             result = await service.analyze_transactions(request)
-            saved = report_store.save(result)
+            # Report rendering and disk I/O must not block queue workers or
+            # other concurrent uploads on the event loop.
+            saved = await asyncio.to_thread(report_store.save, result)
 
             logger.info(
                 "Analysis complete: case=%s decision=%s risk=%s duration=%.1fs",
@@ -74,9 +78,24 @@ def build_router(
         except ModelOutputError as exc:
             logger.error("Model output did not match schema: case=%s error=%s", case_id, exc)
             raise HTTPException(status_code=502, detail=str(exc)) from exc
+        except LlmContextWindowError as exc:
+            logger.error(
+                "LLM context-window error: case=%s upstream_status=%s upstream_request_id=%s error=%s",
+                case_id,
+                exc.status_code,
+                exc.upstream_request_id,
+                exc,
+            )
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         except LlmServiceError as exc:
             logger.error("LLM service call failed: case=%s error=%s", case_id, exc)
             raise HTTPException(status_code=502, detail=str(exc)) from exc
+        except LlmQueueFullError as exc:
+            logger.warning("LLM queue capacity reached: case=%s", case_id)
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except LlmQueueClosedError as exc:
+            logger.warning("LLM queue unavailable during shutdown: case=%s", case_id)
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     @router.get("/reports/{report_name}")
     def download_report(report_name: str) -> FileResponse:

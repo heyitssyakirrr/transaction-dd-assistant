@@ -9,6 +9,7 @@ from app.adapters.llm_client import OpenAICompatibleClient
 from app.api.routes import build_router
 from app.config import Settings
 from app.core.analysis_service import AnalysisService
+from app.core.llm_work_queue import LlmWorkQueue
 from app.core.report_store import ReportStore
 
 logging.basicConfig(
@@ -37,9 +38,14 @@ else:
     )
 
 llm_client = OpenAICompatibleClient(settings)
-service = AnalysisService(llm_client, settings)
+llm_queue = LlmWorkQueue(
+    worker_count=settings.llm_concurrency,
+    maxsize=settings.llm_queue_maxsize,
+    enqueue_timeout_seconds=settings.llm_queue_enqueue_timeout_seconds,
+)
+service = AnalysisService(llm_client, settings, llm_queue)
 
-report_store = ReportStore(PROJECT_DIR / "data" / "reports")
+report_store = ReportStore(settings.report_directory_path)
 
 app = FastAPI(
     title="Transaction Due-Diligence Assistant",
@@ -62,11 +68,27 @@ def workspace() -> FileResponse:
 
 @app.get("/healthz")
 def healthz() -> dict[str, object]:
+    """Liveness probe: confirms this process can answer HTTP requests."""
     return {
         "status": "ok",
         "model": settings.llm_model,
         "llm_configured": bool(settings.llm_base_url),
+        "llm_queue": {"queued": llm_queue.queued_jobs, "active": llm_queue.active_jobs, "workers": settings.llm_concurrency},
     }
+
+
+@app.get("/readyz")
+def readyz() -> JSONResponse:
+    """Readiness probe: do not route uploads until the queue can accept work."""
+    ready = bool(settings.llm_base_url) and llm_queue.is_running
+    return JSONResponse(
+        status_code=200 if ready else 503,
+        content={
+            "status": "ready" if ready else "not_ready",
+            "llm_configured": bool(settings.llm_base_url),
+            "llm_queue_running": llm_queue.is_running,
+        },
+    )
 
 
 @app.exception_handler(Exception)
@@ -78,8 +100,14 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     )
 
 
+@app.on_event("startup")
+async def start_llm_queue() -> None:
+    await llm_queue.start()
+
+
 @app.on_event("shutdown")
 async def close_llm_client() -> None:
+    await llm_queue.close()
     await llm_client.close()
 
 

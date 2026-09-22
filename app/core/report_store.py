@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import html
 import json
+import os
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from uuid import uuid4
 
 from app.core.models import AnalysisResult
 
@@ -22,7 +25,10 @@ class ReportStore:
         self._directory.mkdir(parents=True, exist_ok=True)
 
     def save(self, result: AnalysisResult) -> SavedReport:
-        report_id = result.generated_at.strftime("%Y%m%d-%H%M%S")
+        # A timestamp alone collides when the same customer CSV is processed
+        # twice in one second. The random suffix makes report names safe for
+        # concurrent requests without exposing source data in the filename.
+        report_id = f"{result.generated_at.strftime('%Y%m%d-%H%M%S')}-{uuid4().hex[:12]}"
         safe_case_id = "".join(
             char if char.isalnum() or char in "-_" else "-"
             for char in result.case_id
@@ -32,15 +38,8 @@ class ReportStore:
         json_name = f"{basename}.json"
         html_name = f"{basename}.html"
 
-        (self._directory / json_name).write_text(
-            result.model_dump_json(indent=2),
-            encoding="utf-8",
-        )
-
-        (self._directory / html_name).write_text(
-            self._render_html(result),
-            encoding="utf-8",
-        )
+        self._atomic_write(json_name, result.model_dump_json(indent=2))
+        self._atomic_write(html_name, self._render_html(result))
 
         return SavedReport(html_name=html_name, json_name=json_name)
 
@@ -51,6 +50,27 @@ class ReportStore:
             return None
 
         return candidate if candidate.exists() else None
+
+    def _atomic_write(self, filename: str, content: str) -> None:
+        """Publish a report only after its complete content is on disk."""
+        temp_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=self._directory,
+                prefix=f".{filename}.",
+                suffix=".tmp",
+                delete=False,
+            ) as stream:
+                stream.write(content)
+                stream.flush()
+                os.fsync(stream.fileno())
+                temp_path = Path(stream.name)
+            os.replace(temp_path, self._directory / filename)
+        finally:
+            if temp_path is not None and temp_path.exists():
+                temp_path.unlink(missing_ok=True)
 
     def _render_html(self, result: AnalysisResult) -> str:
         findings = "".join(
