@@ -9,121 +9,64 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <span class="brand-name">Public Bank Berhad</span>
-      <span class="brand-divider"></span>
-      <span class="brand-product">Due-Diligence Workspace</span>
+      <span class="brand-mark">P</span>
+      <span class="brand-text">
+        <span class="brand-name">Public Bank Berhad</span>
+        <span class="brand-sub">Transaction Due-Diligence</span>
+      </span>
     </div>
     <span class="environment">UAT</span>
   </header>
 
-  <main class="page">
-    <section class="hero">
+  <main class="upload-page">
+    <section class="upload-hero">
       <p class="eyebrow">Transaction review</p>
-      <h1>Customer statement assessment</h1>
-      <p>
-        Upload one customer statement. The system detects common transaction
-        columns and performs an evidence-led AML review.
+      <h1>Analyse customer statements with <em>clarity and confidence</em></h1>
+      <p class="upload-hero-lead">
+        Upload one customer statement. Common transaction columns are detected
+        automatically, and the system runs an evidence-led AML review. You'll be
+        taken to a results page once the assessment is ready.
       </p>
     </section>
 
-    <section class="notice">
-      This workspace provides decision support only. All recommendations require
-      review by an authorised bank officer.
-    </section>
+    <section class="card upload-card">
+      <div class="upload-card-head">
+        <p class="eyebrow">New analysis</p>
+        <h2>Upload transaction statement</h2>
+      </div>
 
-    <section class="workspace-grid">
-      <form id="analysis-form" class="card form-card">
-        <div class="section-heading">
-            <h2>Upload transaction statement</h2>
-            <p>
-            Upload a CSV for one customer. Column names are detected automatically.
-            </p>
-        </div>
-
+      <form id="analysis-form">
         <label id="file-field" class="file-field" for="file">
-            <span class="file-field-title">Bank transaction CSV</span>
-            <span class="file-field-drop">
-              <span id="file-name" class="file-field-name">Drag a file here or click to browse</span>
-              <span class="file-field-hint">.csv up to 15 MB</span>
-            </span>
-            <input id="file" type="file" accept=".csv,text/csv" required>
+          <span class="file-field-icon" aria-hidden="true">&uarr;</span>
+          <span id="file-name" class="file-field-title">Drop CSV file here</span>
+          <span class="file-field-hint">or click to browse &middot; .csv up to 15 MB</span>
+          <input id="file" type="file" accept=".csv,text/csv" required>
         </label>
 
         <p class="upload-note">
-            Expected common columns include Date, Description, Debit, Credit, Amount,
-            Balance, Reference, and Transaction ID.
+          Expected columns include Date, Description, Debit, Credit, Amount,
+          Balance, Reference, and Transaction ID.
         </p>
 
-        <button id="submit-button" type="submit">
-            <span id="submit-button-label">Analyse statement</span>
-        </button>
-    </form>
-      <section class="card result-card" aria-live="polite">
-        <div class="section-heading">
-          <h2>Assessment result</h2>
-          <p id="result-status">Upload a statement to begin.</p>
-        </div>
-
+        <div id="error" class="error hidden" role="alert"></div>
         <div id="loading" class="loading hidden">
           <span class="spinner" aria-hidden="true"></span>
-          <span>Analysing transaction segments and verifying material evidence…</span>
+          <span>Segmenting the statement and consulting the model&hellip;</span>
         </div>
 
-        <div id="error" class="error hidden" role="alert"></div>
+        <button id="submit-button" type="submit">
+          <span id="submit-button-label">Start analysis</span>
+          <span aria-hidden="true">&rarr;</span>
+        </button>
+      </form>
 
-        <div id="empty-state" class="empty-state">
-          <p>No assessment yet. Upload a statement on the left to run a review.</p>
-        </div>
-
-        <div id="result" class="hidden">
-          <div class="decision-panel">
-            <div class="decision-panel-head">
-              <div>
-                <p class="eyebrow">Recommendation</p>
-                <h3 id="decision"></h3>
-              </div>
-              <span id="risk-badge" class="risk-badge"></span>
-            </div>
-            <p id="decision-rationale"></p>
-          </div>
-
-          <div class="metric-grid">
-            <div><span>Transactions reviewed</span><strong id="transaction-count"></strong></div>
-            <div><span>LLM segments</span><strong id="segments-count"></strong></div>
-            <div><span>Overall risk level</span><strong id="risk-level"></strong></div>
-          </div>
-
-          <section class="result-section">
-            <h3>Executive summary</h3>
-            <p id="summary"></p>
-          </section>
-
-          <section class="result-section">
-            <div class="result-section-head">
-              <h3>Material findings</h3>
-              <span id="findings-count" class="findings-count"></span>
-            </div>
-            <div id="findings"></div>
-          </section>
-
-          <section class="result-section">
-            <h3>Limitations and reviewer note</h3>
-            <ul id="limitations"></ul>
-          </section>
-
-          <section class="result-section report-links">
-            <a id="report-html-link" href="#" target="_blank" rel="noopener" class="report-link">
-              Open full report
-            </a>
-            <a id="report-json-link" href="#" target="_blank" rel="noopener" class="report-link report-link-secondary">
-              Download JSON
-            </a>
-          </section>
-        </div>
-      </section>
+      <p class="upload-footnote">
+        Decision support only &mdash; every recommendation requires review by an
+        authorised bank officer.
+      </p>
     </section>
   </main>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/upload.js"></script>
 </body>
 </html>

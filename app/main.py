@@ -66,6 +66,11 @@ def workspace() -> FileResponse:
     return FileResponse(BASE_DIR / "templates" / "index.html")
 
 
+@app.get("/results", include_in_schema=False)
+def results_page() -> FileResponse:
+    return FileResponse(BASE_DIR / "templates" / "results.html")
+
+
 @app.get("/healthz")
 def healthz() -> dict[str, object]:
     """Liveness probe: confirms this process can answer HTTP requests."""

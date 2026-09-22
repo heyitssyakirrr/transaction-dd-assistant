@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Assessment result &middot; Transaction Due-Diligence Workspace</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">P</span>
+      <span class="brand-text">
+        <span class="brand-name">Public Bank Berhad</span>
+        <span class="brand-sub">Transaction Due-Diligence</span>
+      </span>
+    </div>
+    <a class="topbar-link" href="/">&larr; New analysis</a>
+  </header>
+
+  <main class="results-page">
+    <div id="empty-state" class="results-empty">
+      <p>No assessment is loaded. Upload a statement to run a review.</p>
+      <a class="report-link" href="/">Go to upload</a>
+    </div>
+
+    <div id="result" class="hidden">
+      <div class="results-meta">
+        <div>
+          <p class="eyebrow">Case</p>
+          <h1 id="case-id"></h1>
+        </div>
+        <p class="results-generated" id="generated-at"></p>
+      </div>
+
+      <section id="decision-card" class="decision-card">
+        <div class="decision-main">
+          <div class="decision-head">
+            <p class="eyebrow">Recommendation</p>
+            <span id="risk-badge" class="risk-badge"></span>
+          </div>
+          <h2 id="decision"></h2>
+          <p id="decision-rationale"></p>
+        </div>
+        <div class="decision-stats">
+          <div><span>Transactions reviewed</span><strong id="transaction-count"></strong></div>
+          <div><span>LLM segments</span><strong id="segments-count"></strong></div>
+          <div><span>Overall risk level</span><strong id="risk-level"></strong></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h3>Executive summary</h3>
+        <p id="summary"></p>
+      </section>
+
+      <section id="mitigating-section" class="section hidden">
+        <h3>Mitigating factors</h3>
+        <ul id="mitigating-factors"></ul>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h3>Material findings</h3>
+          <span id="findings-count" class="findings-count"></span>
+        </div>
+        <div id="findings" class="findings-grid"></div>
+      </section>
+
+      <section class="section">
+        <h3>Limitations and reviewer note</h3>
+        <ul id="limitations"></ul>
+      </section>
+
+      <section class="section actions-row">
+        <a id="report-html-link" href="#" target="_blank" rel="noopener" class="report-link">
+          Open full report
+        </a>
+        <a id="report-json-link" href="#" target="_blank" rel="noopener" class="report-link report-link-secondary">
+          Download JSON
+        </a>
+      </section>
+    </div>
+  </main>
+
+  <script src="/static/results.js"></script>
+</body>
+</html>

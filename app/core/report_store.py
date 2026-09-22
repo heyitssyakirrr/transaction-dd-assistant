@@ -72,15 +72,29 @@ class ReportStore:
             if temp_path is not None and temp_path.exists():
                 temp_path.unlink(missing_ok=True)
 
+    # Distinct from the app's brand red (#c8102e) so a "high risk" finding is
+    # never read as merely a branded/UI element rather than a real signal.
+    _SEVERITY_COLORS = {
+        "low": ("#1c7a4d", "#e7f6ee"),
+        "medium": ("#8a6100", "#fbf1d6"),
+        "high": ("#b3261e", "#fbe9e7"),
+        "critical": ("#b3261e", "#fbe9e7"),
+    }
+    _RISK_BORDER_COLORS = {"low": "#1c7a4d", "medium": "#8a6100", "high": "#b3261e"}
+
     def _render_html(self, result: AnalysisResult) -> str:
         findings = "".join(
             f"""
-            <article class="finding">
-              <h3>{html.escape(finding.category)} · {html.escape(finding.severity)}</h3>
+            <article class="finding" style="border-left-color: {self._SEVERITY_COLORS.get(finding.severity, ("#d3d6db", "#fff"))[0]}">
+              <div class="finding-head">
+                <h3>{html.escape(finding.category)}</h3>
+                <span class="severity" style="color: {self._SEVERITY_COLORS.get(finding.severity, ("#3d4148", "#f4f3f1"))[0]}; background: {self._SEVERITY_COLORS.get(finding.severity, ("#3d4148", "#f4f3f1"))[1]}">{html.escape(finding.severity)}</span>
+              </div>
               <p>{html.escape(finding.rationale)}</p>
+              <p class="confidence">Model confidence: {round(finding.confidence * 100)}%</p>
               <ul>
                 {''.join(
-                    f'<li><strong>{html.escape(", ".join(item.transaction_ids))}</strong>: '
+                    f'<li><span class="txn-ids">{html.escape(", ".join(item.transaction_ids))}</span>'
                     f'{html.escape(item.statement)}</li>'
                     for item in finding.evidence
                 )}
@@ -88,26 +102,85 @@ class ReportStore:
             </article>
             """
             for finding in result.findings
-        ) or "<p>No traceable material findings were returned.</p>"
+        ) or "<p class='muted'>No traceable material findings were returned.</p>"
+
+        mitigating_section = ""
+        if result.mitigating_factors:
+            items = "".join(f"<li>{html.escape(item)}</li>" for item in result.mitigating_factors)
+            mitigating_section = f"<h2>Mitigating factors</h2><ul>{items}</ul>"
+
+        risk_border = self._RISK_BORDER_COLORS.get(result.risk_level, "#d3d6db")
 
         return f"""<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>Due-Diligence Assessment</title>
+<title>Due-Diligence Assessment &middot; {html.escape(result.case_id)}</title>
 <style>
-body {{ font-family: Arial, sans-serif; max-width: 900px; margin: 48px auto; color: #243b53; }}
-h1, h2, h3 {{ color: #102a43; }}
-header {{ border-bottom: 4px solid #b62025; padding-bottom: 18px; }}
-.decision {{ background: #fff7f7; border-left: 4px solid #b62025; padding: 16px; }}
-.finding {{ border: 1px solid #d9e2ec; margin: 14px 0; padding: 14px; }}
-small {{ color: #627d98; }}
+:root {{ color-scheme: light; }}
+body {{
+  font-family: "Segoe UI", system-ui, Arial, sans-serif;
+  max-width: 880px;
+  margin: 48px auto;
+  padding: 0 24px 64px;
+  color: #3d4148;
+  line-height: 1.55;
+  background: #f4f3f1;
+}}
+h1, h2, h3 {{ color: #1c1f26; }}
+header {{
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e3e5e9;
+  padding-bottom: 18px;
+  margin-bottom: 24px;
+}}
+header h1 {{ margin: 0; font-size: 22px; }}
+small {{ color: #6b7280; }}
+.decision {{
+  background: #fff;
+  border: 1px solid #e3e5e9;
+  border-left: 4px solid {risk_border};
+  border-radius: 8px;
+  padding: 20px 22px;
+  margin-bottom: 28px;
+}}
+.decision h2 {{ margin-top: 0; font-size: 19px; }}
+.decision p:last-child {{ margin-bottom: 0; }}
+.finding {{
+  background: #fff;
+  border: 1px solid #e3e5e9;
+  border-left: 3px solid #d3d6db;
+  border-radius: 6px;
+  margin: 14px 0;
+  padding: 14px 16px;
+}}
+.finding-head {{ display: flex; justify-content: space-between; align-items: center; gap: 12px; }}
+.finding h3 {{ margin: 0; font-size: 15px; }}
+.finding .confidence {{ color: #6b7280; font-size: 12.5px; margin: 6px 0 0; }}
+.finding ul {{ margin: 8px 0 0; padding: 0; list-style: none; font-size: 13.5px; }}
+.finding li {{ border-top: 1px solid #e3e5e9; padding: 6px 0; }}
+.finding li:first-child {{ border-top: 0; }}
+.txn-ids {{ font-family: Consolas, monospace; font-weight: 700; color: #1c1f26; margin-right: 8px; }}
+.severity {{
+  padding: 3px 9px;
+  border-radius: 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  white-space: nowrap;
+}}
+.muted {{ color: #6b7280; }}
+ul.plain {{ padding-left: 20px; }}
 </style>
 </head>
 <body>
 <header>
   <h1>Transaction Due-Diligence Assessment</h1>
-  <small>Case: {html.escape(result.case_id)}</small>
+  <small>Case: {html.escape(result.case_id)}<br>Generated: {html.escape(result.generated_at.isoformat())}</small>
 </header>
 <section class="decision">
   <h2>Recommendation: {html.escape(result.decision.replace("_", " ").title())} ({html.escape(result.risk_level.title())} risk)</h2>
@@ -116,9 +189,10 @@ small {{ color: #627d98; }}
 <h2>Executive summary</h2>
 <p>{html.escape(result.executive_summary)}</p>
 <p><small>{result.transactions_processed} transactions reviewed across {result.chunks_processed} LLM segments.</small></p>
+{mitigating_section}
 <h2>Material findings</h2>
 {findings}
 <h2>Limitations</h2>
-<ul>{''.join(f'<li>{html.escape(item)}</li>' for item in result.limitations)}</ul>
+<ul class="plain">{''.join(f'<li>{html.escape(item)}</li>' for item in result.limitations) or '<li class="muted">None recorded.</li>'}</ul>
 </body>
 </html>"""
