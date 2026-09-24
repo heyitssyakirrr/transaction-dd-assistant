@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent
 
 
 def _load_dotenv(path: Path) -> None:
@@ -47,6 +47,8 @@ class Settings:
     max_target_chunks: int = int(os.getenv("MAX_TARGET_CHUNKS", "6"))
     max_target_chunks_per_review: int = int(os.getenv("MAX_TARGET_CHUNKS_PER_REVIEW", "2"))
     max_response_tokens: int = int(os.getenv("MAX_RESPONSE_TOKENS", "2200"))
+    # Zero omits the parameter; only enable if the loader accepts frequency_penalty.
+    llm_frequency_penalty: float = float(os.getenv("LLM_FREQUENCY_PENALTY", "0"))
     report_directory: str = os.getenv("REPORT_DIRECTORY", str(BASE_DIR / "data" / "reports"))
     require_human_review: bool = os.getenv("REQUIRE_HUMAN_REVIEW", "true").lower() == "true"
 

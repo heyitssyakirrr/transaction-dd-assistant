@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from collections.abc import Awaitable
 from datetime import datetime, timezone
 from typing import Literal, TypeVar
@@ -8,12 +9,12 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ValidationError
 
-from app.config import Settings
-from app.core.models import AnalysisResult, AnalyzeTransactionsRequest, CaseSynthesis, ChunkReport, EvidenceItem, EvidenceReview, Finding, LlmClient
-from app.core.prompts import ANALYST_SYSTEM_PROMPT, chunk_payload, evidence_payload, final_payload, synthesis_payload
-from app.core.transaction_adapter import normalize_transactions
-from app.core.transaction_view import compact_row
-from app.core.llm_work_queue import LlmWorkQueue
+from Transaction_ODD_Assistant.config import Settings
+from Transaction_ODD_Assistant.core.models import AnalysisResult, AnalyzeTransactionsRequest, CaseSynthesis, ChunkReport, EvidenceItem, EvidenceReview, Finding, LlmClient, StrList
+from Transaction_ODD_Assistant.core.prompts import ANALYST_SYSTEM_PROMPT, chunk_payload, evidence_payload, final_payload, synthesis_payload
+from Transaction_ODD_Assistant.core.transaction_adapter import normalize_transactions
+from Transaction_ODD_Assistant.core.transaction_view import compact_row
+from Transaction_ODD_Assistant.core.llm_work_queue import LlmWorkQueue
 
 
 class ModelOutputError(ValueError):
@@ -21,6 +22,8 @@ class ModelOutputError(ValueError):
 
 
 ModelType = TypeVar("ModelType", bound=BaseModel)
+
+_ALIAS_PATTERN = re.compile(r"\bT\d+\b")
 
 
 class AnalysisService:
@@ -38,6 +41,12 @@ class AnalysisService:
     async def analyze_transactions(self, request: AnalyzeTransactionsRequest) -> AnalysisResult:
         normalized = normalize_transactions(request.transactions, request.column_mapping)
         rows = [compact_row(row) for row in normalized]
+        # Long IDs cost ~17 tokens each (digits tokenise one by one); the LLM only sees T1..Tn.
+        alias_to_id: dict[str, str] = {}
+        for index, row in enumerate(rows, start=1):
+            alias = f"T{index}"
+            alias_to_id[alias] = str(row["transaction_id"])
+            row["transaction_id"] = alias
         chunks = self._split(rows)
 
         reports = await self._gather_or_cancel([
@@ -67,8 +76,8 @@ class AnalysisService:
             for evidence in finding.evidence
             for transaction_id in evidence.transaction_ids
         }
-        findings = self._validated_findings(final.verified_findings, verified_ids)
-        decision, rationale = final.decision, final.decision_rationale
+        findings = self._restore_ids(self._validated_findings(final.verified_findings, verified_ids), alias_to_id)
+        decision, rationale = final.decision, self._restore_text(final.decision_rationale, alias_to_id)
         if decision in {"enhanced_due_diligence", "escalate"} and not findings:
             decision = "monitor"
             rationale = "No material final finding was retained without verified raw-transaction evidence. Authorised human review is required."
@@ -78,7 +87,7 @@ class AnalysisService:
             status="needs_review",
             decision=decision,
             decision_rationale=rationale,
-            executive_summary=final.executive_summary,
+            executive_summary=self._restore_text(final.executive_summary, alias_to_id),
             findings=findings,
             mitigating_factors=[],
             limitations=list(dict.fromkeys(final.limitations + synthesis.limitations + [
@@ -111,6 +120,8 @@ class AnalysisService:
             operation=lambda: self._llm.complete_json(system_prompt=ANALYST_SYSTEM_PROMPT, user_payload=payload),
         )
         try:
+            if set(raw) == {"response_schema"} and isinstance(raw["response_schema"], dict):
+                raw = raw["response_schema"]
             return model.model_validate(raw)
         except ValidationError as exc:
             raise ModelOutputError(f"LLM JSON does not match the required schema: {exc}") from exc
@@ -172,6 +183,23 @@ class AnalysisService:
                 retained.append(finding)
         return retained
 
+    @staticmethod
+    def _restore_text(text: str, alias_to_id: dict[str, str]) -> str:
+        return _ALIAS_PATTERN.sub(lambda match: alias_to_id.get(match.group(0), match.group(0)), text)
+
+    @classmethod
+    def _restore_ids(cls, findings: list[Finding], alias_to_id: dict[str, str]) -> list[Finding]:
+        for finding in findings:
+            finding.rationale = cls._restore_text(finding.rationale, alias_to_id)
+            finding.evidence = [
+                EvidenceItem(
+                    transaction_ids=[alias_to_id[alias] for alias in item.transaction_ids],
+                    statement=cls._restore_text(item.statement, alias_to_id),
+                )
+                for item in finding.evidence
+            ]
+        return findings
+
 
 class _FinalOutput(BaseModel):
     decision: Literal["no_action", "monitor", "request_information", "enhanced_due_diligence", "escalate"]
@@ -179,4 +207,4 @@ class _FinalOutput(BaseModel):
     executive_summary: str
     risk_level: Literal["low", "medium", "high"]
     verified_findings: list[Finding]
-    limitations: list[str]
+    limitations: StrList

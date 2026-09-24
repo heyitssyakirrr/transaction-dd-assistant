@@ -9,16 +9,16 @@ from typing import Any
 
 import httpx
 
-from app.config import Settings
+from Transaction_ODD_Assistant.config import Settings
 
-logger = logging.getLogger("app.llm_client")
+logger = logging.getLogger("Transaction_ODD_Assistant.llm_client")
 
 # Transient failures worth a retry: connection issues, timeouts, and the
 # status codes an upstream loader typically returns while overloaded or
 # warming up. Anything else (4xx client errors) is not retried, since
 # retrying a malformed request just burns one of the loader's few slots.
 _RETRYABLE_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
-_MAX_ATTEMPTS = 3
+_MAX_ATTEMPTS = 1
 _BACKOFF_BASE_SECONDS = 0.75
 
 # Cuts generation short if the model keeps talking after its JSON object,
@@ -26,13 +26,15 @@ _BACKOFF_BASE_SECONDS = 0.75
 # copied from a flat-schema stop list like "}\n{" or "}\n " -- those match
 # an ordinary nested object's closing brace too (see the schemas in
 # prompts.py, which nest arrays of objects) and would truncate a correct,
-# in-progress response. These patterns only match a genuine blank line or a
-# code fence, which the system prompt explicitly tells the model not to
+# in-progress response. These patterns only match a genuine blank line,
+# which the system prompt explicitly tells the model not to
 # produce inside a compact, single-line JSON object -- so seeing either one
 # is itself a sign the model has moved past the JSON and started rambling.
+# "```" is deliberately excluded: Qwen often opens with ```json, which would
+# stop generation before any JSON and return empty content.
 # This is a latency/cost optimisation, not the correctness mechanism -- see
 # _parse_json_content for the part that actually guarantees a valid result.
-_STOP_SEQUENCES = ["\n\n", "\r\n\r\n", "```"]
+_STOP_SEQUENCES = ["\n\n", "\r\n\r\n"]
 
 
 class LlmServiceError(RuntimeError):
@@ -74,6 +76,7 @@ class OpenAICompatibleClient:
                 max_connections=settings.llm_concurrency,
                 max_keepalive_connections=settings.llm_concurrency,
             ),
+            verify=False
         )
 
     async def complete_json(self, *, system_prompt: str, user_payload: dict[str, Any]) -> dict[str, Any]:
@@ -88,6 +91,12 @@ class OpenAICompatibleClient:
         self._validate_context_budget(body)
         payload = await self._post_with_retries(body, headers)
 
+        choice = (payload.get("choices") or [{}])[0]
+        logger.info(
+            "LLM completion: finish_reason=%s completion_tokens=%s",
+            choice.get("finish_reason"),
+            (payload.get("usage") or {}).get("completion_tokens"),
+        )
         content = _extract_content(payload)
         self._log_raw_response(content)
         try:
@@ -129,6 +138,8 @@ class OpenAICompatibleClient:
             "stream": False,
             "stop": _STOP_SEQUENCES,
         }
+        if self._settings.llm_frequency_penalty:
+            body["frequency_penalty"] = self._settings.llm_frequency_penalty
         if use_response_format:
             body["response_format"] = {"type": "json_object"}
         return body

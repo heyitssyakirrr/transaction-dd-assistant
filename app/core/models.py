@@ -2,9 +2,17 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Literal, Protocol
+from typing import Annotated, Any, Literal, Protocol
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+
+
+def _as_list(value: Any) -> Any:
+    return [value] if isinstance(value, str) else value
+
+
+# Small models sometimes return a single string where the schema asks for a list.
+StrList = Annotated[list[str], BeforeValidator(_as_list)]
 
 
 class TransactionColumnMapping(BaseModel):
@@ -62,7 +70,7 @@ class ChunkReport(BaseModel):
     chunk_id: int = Field(ge=1)
     material_activity_summary: str = Field(min_length=1, max_length=1_400)
     findings: list[Finding] = Field(default_factory=list, max_length=8)
-    entities_of_interest: list[str] = Field(default_factory=list, max_length=20)
+    entities_of_interest: StrList = Field(default_factory=list, max_length=20)
     cross_chunk_review_needed: bool
 
 
@@ -78,12 +86,12 @@ class CaseSynthesis(BaseModel):
     whole_statement_summary: str = Field(min_length=1, max_length=1_800)
     case_hypotheses: list[CaseHypothesis] = Field(default_factory=list, max_length=10)
     selected_chunk_ids: list[int] = Field(default_factory=list, max_length=6)
-    limitations: list[str] = Field(default_factory=list, max_length=8)
+    limitations: StrList = Field(default_factory=list, max_length=8)
 
 
 class EvidenceReview(BaseModel):
     verified_findings: list[Finding] = Field(default_factory=list, max_length=10)
-    disproved_or_uncertain_hypotheses: list[str] = Field(default_factory=list, max_length=10)
+    disproved_or_uncertain_hypotheses: StrList = Field(default_factory=list, max_length=10)
 
 
 class AnalysisResult(BaseModel):

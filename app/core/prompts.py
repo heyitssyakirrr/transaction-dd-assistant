@@ -10,9 +10,10 @@ or facts absent from the statement. An unusual pattern is a review indicator, no
 
 Every material finding must cite only supplied transaction IDs. 
 Do not cite summaries as evidence. 
-Do not report every transaction: report material activity only. 
+Do not report every transaction: report material activity only. Do not report routine, expected activity as a finding; an empty findings list is valid. Keep every text field brief. 
 Clearly keep hypotheses separate from verified findings. 
 Return JSON only and follow the requested schema exactly.
+Return the object described by response_schema directly; never wrap it in a "response_schema" key.
 
 Output format: respond with a single JSON object as compact, single-line JSON —
 no line breaks, indentation, or extra whitespace inside it. Do not wrap it in
@@ -31,15 +32,15 @@ closing brace."""
 # three call sites can't drift out of sync with each other over time.
 
 _EVIDENCE_ITEM_SCHEMA: dict[str, Any] = {
-    "transaction_ids": ["transaction_id"],
-    "statement": "string",
+    "transaction_ids": ["transaction_id (at most 5)"],
+    "statement": "string, maximum 20 words",
 }
 
 _FINDING_SCHEMA: dict[str, Any] = {
-    "category": "string",
+    "category": "string, maximum 5 words",
     "severity": "low|medium|high|critical",
     "confidence": "number 0 to 1",
-    "rationale": "string",
+    "rationale": "string, maximum 30 words",
     "evidence": [_EVIDENCE_ITEM_SCHEMA],
 }
 
@@ -53,13 +54,13 @@ def chunk_payload(chunk_id: int, total_chunks: int, rows: list[dict[str, Any]]) 
         "amount/frequency, rapid movement of funds, cash activity, "
         "concentrated or repeated counterparties, and other AML-relevant "
         "indicators. Flag only patterns that need comparison with other "
-        "segments."
+        "segments. Return at most 3 findings."
     )
     response_schema: dict[str, Any] = {
         "chunk_id": chunk_id,
-        "material_activity_summary": "string, maximum 250 words",
+        "material_activity_summary": "string, maximum 60 words",
         "findings": [_FINDING_SCHEMA],
-        "entities_of_interest": ["counterparty or entity text"],
+        "entities_of_interest": ["counterparty or entity text, at most 5 entries"],
         "cross_chunk_review_needed": "boolean",
     }
     return {
@@ -80,21 +81,22 @@ def synthesis_payload(reports: list[dict[str, Any]], max_selected_chunks: int) -
         "reports: repeated entities, recurring high-value flows, rapid "
         "in/out behaviour, recurring cash activity, or material changes "
         "over time. Select raw chunks for evidence verification; selected "
-        "chunks are not evidence by themselves."
+        "chunks are not evidence by themselves. Return at most 4 "
+        "hypotheses and at most 3 limitations."
     )
     response_schema: dict[str, Any] = {
-        "whole_statement_summary": "string, maximum 350 words",
+        "whole_statement_summary": "string, maximum 120 words",
         "case_hypotheses": [
             {
                 "hypothesis_id": "H-001",
-                "pattern": "string",
+                "pattern": "string, maximum 20 words",
                 "severity": "low|medium|high|critical",
                 "related_chunk_ids": [1],
-                "rationale": "string",
+                "rationale": "string, maximum 40 words",
             }
         ],
         "selected_chunk_ids": [1],
-        "limitations": ["string"],
+        "limitations": ["string, maximum 20 words"],
     }
     return {
         "task": task,
@@ -112,11 +114,12 @@ def evidence_payload(hypotheses: list[dict[str, Any]], raw_chunks: list[dict[str
         "transactions. Return a finding only if its cited transaction IDs "
         "directly support it. Do not convert an unverified hypothesis into "
         "a fact. If evidence is insufficient, put it in "
-        "disproved_or_uncertain_hypotheses."
+        "disproved_or_uncertain_hypotheses. Return at most 4 verified "
+        "findings."
     )
     response_schema: dict[str, Any] = {
         "verified_findings": [_FINDING_SCHEMA],
-        "disproved_or_uncertain_hypotheses": ["hypothesis id and brief explanation"],
+        "disproved_or_uncertain_hypotheses": ["hypothesis id and explanation, maximum 20 words"],
     }
     return {
         "task": task,
@@ -137,15 +140,16 @@ def final_payload(synthesis: dict[str, Any], evidence_reviews: list[dict[str, An
         "needs explanation; enhanced_due_diligence needs a material, "
         "verified concern; escalate needs a severe, verified concern. This "
         "is a recommendation for authorised human review, never an account "
-        "or regulatory decision."
+        "or regulatory decision. Return at most 5 verified findings and at "
+        "most 3 limitations."
     )
     response_schema: dict[str, Any] = {
         "decision": "no_action|monitor|request_information|enhanced_due_diligence|escalate",
-        "decision_rationale": "string, maximum 250 words",
-        "executive_summary": "string, maximum 350 words; material activity only",
+        "decision_rationale": "string, maximum 60 words",
+        "executive_summary": "string, maximum 120 words; material activity only",
         "risk_level": "low|medium|high",
         "verified_findings": [_FINDING_SCHEMA],
-        "limitations": ["string"],
+        "limitations": ["string, maximum 20 words"],
     }
     return {
         "task": task,
