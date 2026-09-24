@@ -9,9 +9,9 @@ from typing import Any
 
 import httpx
 
-from Transaction_ODD_Assistant.config import Settings
+from app.config import Settings
 
-logger = logging.getLogger("Transaction_ODD_Assistant.llm_client")
+logger = logging.getLogger("app.llm_client")
 
 # Transient failures worth a retry: connection issues, timeouts, and the
 # status codes an upstream loader typically returns while overloaded or

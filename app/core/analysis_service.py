@@ -9,12 +9,12 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ValidationError
 
-from Transaction_ODD_Assistant.config import Settings
-from Transaction_ODD_Assistant.core.models import AnalysisResult, AnalyzeTransactionsRequest, CaseSynthesis, ChunkReport, EvidenceItem, EvidenceReview, Finding, LlmClient, StrList
-from Transaction_ODD_Assistant.core.prompts import ANALYST_SYSTEM_PROMPT, chunk_payload, evidence_payload, final_payload, synthesis_payload
-from Transaction_ODD_Assistant.core.transaction_adapter import normalize_transactions
-from Transaction_ODD_Assistant.core.transaction_view import compact_row
-from Transaction_ODD_Assistant.core.llm_work_queue import LlmWorkQueue
+from app.config import Settings
+from app.core.models import AnalysisResult, AnalyzeTransactionsRequest, CaseSynthesis, ChunkReport, EvidenceItem, EvidenceReview, Finding, LlmClient, StrList
+from app.core.prompts import ANALYST_SYSTEM_PROMPT, chunk_payload, evidence_payload, final_payload, synthesis_payload
+from app.core.transaction_adapter import normalize_transactions
+from app.core.transaction_view import compact_row
+from app.core.llm_work_queue import LlmWorkQueue
 
 
 class ModelOutputError(ValueError):
