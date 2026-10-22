@@ -1,109 +1,81 @@
-# Transaction Due-Diligence Assistant
+# Transaction review assistant
 
-An internal UAT application that accepts one customer's bank-transaction CSV,
-uses the internal Qwen service to review it for AML-relevant activity, and
-returns an evidence-led recommendation for authorised staff.
+Reviews one account's transactions for money-laundering patterns and gives the AML analyst a report:
+the risk level, the story of the account, each pattern found with its transactions and exact totals,
+what to verify first, and questions to ask the customer.
 
-## Workflow
+**The AI (gpt-6-luna on AI Foundry) makes every judgement. The code only prepares the data, answers the
+AI's tool questions exactly, and checks the AI's answers. The analyst decides the action.**
 
-For a statement larger than one model context window, the service uses an LLM
-workflow rather than a Python risk model:
+## What goes in
 
-1. The application normalizes and chronologically orders CSV rows only.
-2. It sends each 300-row segment to Qwen for a structured material-activity
-   review. A shared bounded FIFO queue has three workers, so at most three LLM
-   calls are active at once; a large case submits only three chunks at a time,
-   leaving shared capacity available for other customer cases.
-3. Qwen receives all segment reports to identify case-level hypotheses.
-4. Qwen selects up to six original segments for raw-evidence verification.
-5. Qwen produces the final recommendation from verified evidence only.
+One account per file (CSV, TSV or Parquet). Only four columns are used:
 
-Python does not score customers, detect AML anomalies, or write transaction
-summaries. It only moves data, validates response schemas, and removes findings
-that cite transaction IDs not present in the supplied raw evidence.
+| Column | Meaning |
+|---|---|
+| TXN_DATE | Date (DD/MM/YYYY or YYYY-MM-DD, with or without a time) |
+| TRANSACTION_SEQ_NO | Order within the day (1 = first) |
+| CREDIT_DEBIT_CODE | C = money in, D = money out |
+| AMOUNT | Amount in RM |
 
-## Decisions
+Every other column is ignored. The names are set in `app/columns.py`.
 
-- `no_action`: no material transaction concern was evidenced.
-- `monitor`: low concern; staff may monitor according to policy.
-- `request_information`: activity requires explanation or supporting documents.
-- `enhanced_due_diligence`: material transaction-based concern is verified.
-- `escalate`: severe, verified concern; follow internal AML procedure.
+## How a review works
 
-These are staff recommendations, not automatic account, regulatory, or case
-closure decisions.
+The code sorts the transactions, labels them T1, T2, T3…, and prepares **the summary**: exact totals per
+month and per day, the amounts that repeat, the largest transactions and the longest quiet periods.
 
-## Setup
+**Small account (300 rows or fewer), about 5 AI calls:**
+1. **Read**: the AI reads every row and the summary, and notes the patterns it sees.
+2. **Check**: each suspected pattern gets a second look against the real rows (with tools).
+3. **Decide**: the AI sets the risk level and writes the report text.
 
-```powershell
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
+**Big account (more than 300 rows), about 15 calls for 1,000 rows and 45 for 10,000:**
+1. **Summary review**: one AI reads only the summary, to spot patterns across months.
+2. **Read**: at the same time, the rows are split into groups of about 300 and one AI reads each group.
+3. **Combine**: one AI joins all the notes (with tools), so a pattern split across groups becomes one.
+4. **Check**, then 5. **Decide**, as above.
+
+**Tools.** In the Combine and Check steps the AI can ask the code exact questions:
+`get_transactions`, `follow_money`, `summarise`, `compare_periods`, `find_repeated_amounts`,
+`find_quiet_periods` and `total_of`. Every tool use is listed in the report.
+
+**Checks.** Code checks every transaction ID, RM amount and date the AI writes, and every checklist mark.
+Problems are listed in red; nothing is changed or hidden. A failed or blocked AI call is retried once;
+if it still fails, the report says what was not done.
+
+## Run
+
+```bash
 pip install -r requirements.txt
-Copy-Item .env.example .env
-python -m app.main
+cp .env.example .env               # fill in LLM_BASE_URL, LLM_API_KEY and HELPER_ID
+
+python -m app.cli path/to/account.csv     # one review; prints where the report was saved
+python -m app.main                        # web page on http://127.0.0.1:5000
 ```
 
-Edit `.env` in the project root with your OpenShift LLM loader URL and model.
-Keep `LLM_CONCURRENCY=3` unless the platform team confirms higher capacity.
-`LLM_QUEUE_MAXSIZE` is intentional backpressure: when it is full the request
-receives HTTP 503 rather than growing memory or overwhelming the loader.
-Set `REPORT_DIRECTORY` to a path backed by an OpenShift persistent-volume
-mount; reports stored only in the container filesystem are lost whenever its
-pod is recreated.
+Reports are saved in `data/reports` as `.html` (for the analyst) and `.json` (for the production UI).
 
-## LLM diagnostics
+## Files
 
-Every LLM call logs its queue wait, worker, safe request size in bytes,
-token estimate, configured prompt budget, HTTP status, duration, retry attempt,
-and upstream request/correlation ID when available. Transaction values and full
-LLM error bodies are deliberately not logged.
+| File | What it does |
+|---|---|
+| `app/columns.py` | The four column names |
+| `app/config.py` | Settings from `.env` |
+| `app/ingest.py` | Reads the file, checks every row, sorts, labels T1…Tn |
+| `app/summary.py` | Row format, exact totals, the summary, groups, the rows each Check sees |
+| `app/tools.py` | The seven tools |
+| `app/glossary.py` | The patterns, what the data cannot show, risk levels (draft), writing rules |
+| `app/stages/` | One file per AI step: `read`, `summary_review`, `combine`, `check`, `decide` |
+| `app/pipeline.py` | Runs the steps for one account |
+| `app/llm/client.py` | One request to AI Foundry |
+| `app/llm/ask.py` | One AI call: tool rounds, the one retry, the call record |
+| `app/checks.py`, `app/report_builder.py` | Checks on the AI's text, and building the report |
+| `app/report.py`, `app/report_html.py` | The report as data (JSON) and as a page (HTML) |
+| `app/service.py`, `app/cli.py`, `app/main.py` | Saving reports, command line, web page |
 
-Set `LLM_CONTEXT_WINDOW_TOKENS` only to the model context window confirmed by
-the platform team. The application reserves `MAX_RESPONSE_TOKENS` and
-`LLM_CONTEXT_SAFETY_MARGIN_TOKENS`; a request estimated to exceed the remaining
-prompt budget fails clearly with HTTP 422 before it reaches the LLM. If the
-loader reports a context-window rejection itself, it is classified, logged, and
-also returned as HTTP 422. The estimate is a safety guard, not a replacement
-for the model's actual tokenizer.
+## To do with the senior
 
-For approved troubleshooting, set `LLM_LOG_RAW_RESPONSE=true`. Each completed
-LLM call then logs the raw model content once; `LLM_LOG_RAW_RESPONSE_MAX_CHARS`
-limits its length. Keep this disabled in normal production use because output
-can contain transaction-derived personal data.
-
-Run this service with **one Uvicorn worker** when `LLM_CONCURRENCY=3`. The
-queue is process-local, so each extra application process has its own three
-workers. If this application is scaled to multiple replicas, divide the three
-available LLM slots across them or use a shared, durable queue such as Redis.
-
-Open `http://127.0.0.1:5000`.
-
-## CSV input
-
-Upload one UTF-8 CSV. Common headers are detected automatically, including:
-`Date`, `Transaction Date`, `Description`, `Debit`, `Credit`, `Amount`,
-`Balance`, `Reference`, `Transaction ID`, `Channel`, and `Merchant`.
-
-Each 300-row chunk sent to the LLM contains only these transaction fields:
-`transaction_id`, `date`, `amount`, `direction`, `currency`, `counterparty`,
-`description`, `channel`, `merchant`, and `balance`.
-
-The auto-mapper generates IDs only where the statement lacks a source
-transaction reference. It performs no analysis.
-
-## Reports
-
-Each completed review is saved under `data/reports/` as HTML and JSON. Open the
-HTML report and use the browser's **Print → Save as PDF** if a PDF copy is
-needed.
-
-## LLM loader contract
-
-The adapter expects an OpenAI-compatible endpoint:
-
-```text
-POST {LLM_BASE_URL}{LLM_CHAT_PATH}
-```
-
-If your internal loader has a different request/response contract, update only
-`app/adapters/llm_client.py`.
+1. Replace the draft risk levels in `app/glossary.py` with the AML team's.
+2. Confirm the RM 25,000 cash reporting limit (`CASH_REPORT_LIMIT`).
+3. Confirm whether TXN_DATE has a time of day (both work).
