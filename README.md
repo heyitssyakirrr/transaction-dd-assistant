@@ -48,7 +48,7 @@ if it still fails, the report says what was not done.
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env               # fill in LLM_BASE_URL, LLM_API_KEY and HELPER_ID
+cp .env.example .env               # fill in LLM_BASE_URL and HELPER_ID
 
 python -m app.cli path/to/account.csv     # one review; prints where the report was saved
 python -m app.main                        # web page on http://127.0.0.1:5000

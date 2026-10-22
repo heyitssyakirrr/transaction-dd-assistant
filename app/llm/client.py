@@ -1,7 +1,6 @@
 """One request to the AI Foundry chat endpoint, in the format the platform team gave:
 
     POST {LLM_BASE_URL}/foundry/chat/completions
-    Authorization: Bearer {LLM_API_KEY}
     X-PBAI-Helper-Id: {HELPER_ID}
     {"model": "gpt-6-luna",
      "messages": [{"role": "system", ...}, {"role": "user", ...}, {"role": "assistant", ...}, {"role": "tool", ...}],
@@ -124,18 +123,13 @@ class FoundryClient:
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
-        if self._settings.llm_api_key:
-            key = self._settings.llm_api_key
-            if self._settings.llm_api_key_header.lower() == "authorization":
-                key = f"Bearer {key}"
-            headers[self._settings.llm_api_key_header] = key
         if self._settings.helper_id:
             headers["X-PBAI-Helper-Id"] = self._settings.helper_id
         return headers
 
     def _save_blocked(self, name: str, body: dict[str, Any]) -> None:
         """Keep a blocked request to investigate (LLM_SAVE_BLOCKED_REQUESTS=true only). It holds transaction
-        rows, never the API key."""
+        rows, never the headers."""
         if not self._settings.llm_save_blocked_requests:
             return
         try:

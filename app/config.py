@@ -49,8 +49,6 @@ class Settings:
     llm_base_url: str = _env("LLM_BASE_URL", "")
     llm_chat_path: str = _env("LLM_CHAT_PATH", "/foundry/chat/completions")
     llm_model: str = _env("LLM_MODEL", "gpt-6-luna")
-    llm_api_key: str = _env("LLM_API_KEY", "")
-    llm_api_key_header: str = _env("LLM_API_KEY_HEADER", "Authorization")
     helper_id: str = _env("HELPER_ID", "")                 # sent as the X-PBAI-Helper-Id header
     llm_timeout_seconds: int = _int("LLM_TIMEOUT_SECONDS", 180)
     llm_verify_ssl: bool = _flag("LLM_VERIFY_SSL", False)   # the internal gateway's certificate
