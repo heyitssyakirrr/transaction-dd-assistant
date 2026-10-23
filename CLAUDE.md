@@ -82,6 +82,7 @@ Five folders, one job each. Imports go one way: `web` uses `service`, `report` u
 | File | Job |
 |---|---|
 | `app/config.py` | Settings from `.env` |
+| `app/logging_config.py` | Console + daily log file in `LOG_DIRECTORY`; each line names the account file |
 | `app/service.py`, `app/cli.py`, `app/main.py` | Save reports; command line; web page (the entry points) |
 | **`app/account/`** | **The rows: read the file and compute exact figures** |
 | `app/account/columns.py` | The 4 column names |

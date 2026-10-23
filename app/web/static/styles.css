@@ -919,10 +919,112 @@ button.pager-button:disabled { cursor: default; opacity: .4; }
 
 /* Who wrote the summary, when it is not the full AI summary. */
 .summary-source { margin: 0 0 10px; padding: 8px 12px; border-left: 3px solid #b54708; background: #fffaeb; font-size: 13px; }
-/* ---------- Transaction review report (results page) ---------- */
-.section-head h3 .pattern-tag { margin-left: 8px; vertical-align: middle; }
-.timing-totals span.glance-note { font-size: 12.5px; font-weight: 400; text-transform: none; letter-spacing: 0; }
-.plain-list li > p { margin: 0; color: var(--ink); }
-.plain-list li > .table-wrap, .plain-list li > .check-issues { flex-basis: 100%; margin-top: 4px; }
-.evidence-table td.text-cell { text-align: left; white-space: normal; min-width: 16em; }
-.check-card .severity { align-self: center; }
+
+/* =========================================================================================
+   Transaction review report (results page). Each part of the report is a white card on the
+   page background; its title row says who wrote it: "AI" (written by the AI) or "Exact"
+   (computed from the file by code).
+   ========================================================================================= */
+.report-legend {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px;
+  margin: 0 0 18px; font-size: 12.5px; color: var(--muted);
+}
+.report-legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+.report-card {
+  margin-top: 18px; padding: 22px 24px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.report-card-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin: -2px 0 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line);
+}
+.report-card-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.report-card-title h3 { margin: 0; font-size: 16px; color: var(--ink); }
+.report-card-note { margin: -6px 0 14px; font-size: 13px; color: var(--muted); }
+.report-card > details > summary { cursor: pointer; font-weight: 650; color: var(--ink); }
+.report-card > details[open] > summary { margin-bottom: 12px; }
+
+.source { display: inline-flex; gap: 4px; }
+.source-tag {
+  padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .4px; text-transform: uppercase; line-height: 1.6;
+}
+.source-tag.ai { color: #4b3fa7; background: #eeecfb; border: 1px solid #dcd8f6; }
+.source-tag.exact { color: #33573f; background: #e9f3ec; border: 1px solid #d3e7da; }
+
+/* Account at a glance: a grid of tiles, the figure on one line, the detail under it. */
+.glance-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.glance-tile { padding: 12px 14px; border: 1px solid var(--line); border-radius: 6px; background: #fafafa; min-width: 0; }
+.glance-label {
+  display: block; font-size: 11px; font-weight: 650; letter-spacing: .4px; text-transform: uppercase; color: var(--muted);
+}
+.glance-value {
+  display: block; margin-top: 4px; font-size: 17px; font-weight: 700; color: var(--ink);
+  font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.glance-detail { display: block; margin-top: 2px; font-size: 12.5px; color: var(--muted); }
+
+/* What to verify first: numbered steps, each with its transactions. */
+.verify-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; counter-reset: step; }
+.verify-item {
+  position: relative; padding: 12px 14px 12px 50px; border: 1px solid var(--line); border-radius: 6px; background: #fafafa;
+  counter-increment: step;
+}
+.verify-item::before {
+  content: counter(step); position: absolute; left: 14px; top: 12px; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--ink); color: #fff; font-size: 12.5px; font-weight: 700; display: grid; place-items: center;
+}
+.verify-item > p { margin: 2px 0 0; color: var(--ink); font-size: 14.5px; }
+.verify-item .table-wrap { margin-top: 10px; background: var(--surface); }
+
+.question-list { margin: 0; padding-left: 20px; display: grid; gap: 8px; color: var(--ink); font-size: 14.5px; }
+
+/* Findings: one card each; the AI's four parts, then the exact figures and the transactions. */
+.finding-card {
+  padding: 16px 18px; border: 1px solid var(--line); border-left: 4px solid var(--warning); border-radius: 6px;
+}
+.finding-card + .finding-card { margin-top: 14px; }
+.finding-card .check-head h4 { font-size: 15.5px; }
+.finding-parts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; margin-top: 12px; }
+.finding-part h5 {
+  margin: 0 0 2px; font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--muted);
+}
+.finding-part p { margin: 0; font-size: 14px; color: var(--ink); }
+.figure-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.figure-chip {
+  padding: 5px 10px; border-radius: 4px; background: var(--canvas); font-size: 12.5px; color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.figure-chip strong { color: var(--ink); }
+
+.status-chip { padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.status-chip.found { color: var(--warning); background: var(--warning-tint); }
+.status-chip.not_found { color: var(--success); background: var(--success-tint); }
+.status-chip.cannot_check { color: var(--ink-soft); background: var(--canvas); }
+.status-chip.not_reported { color: var(--danger); background: var(--danger-tint); }
+
+.evidence-table td.text-cell, .evidence-table th.text-cell { text-align: left; white-space: normal; }
+.evidence-table td.text-cell:last-child { min-width: 16em; }
+.evidence-table tr.has-note td { background: var(--warning-tint); }
+.evidence-table tr.has-note td:first-child { font-weight: 700; color: var(--ink); }
+.evidence-table code { font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+
+/* Problems: shown at the top of the report when part of the review was not done. */
+.problem-box {
+  margin-top: 14px; padding: 12px 14px; border: 1px solid #f1c4bf; border-left: 4px solid var(--danger);
+  border-radius: 6px; background: var(--danger-tint); color: var(--ink); font-size: 13.5px;
+}
+.problem-box strong { color: var(--danger); }
+.problem-box ul { margin: 6px 0 0; padding-left: 18px; }
+.problem-box + .section-hint { margin-top: 12px; }
+.call-failed td { color: var(--danger); }
+
+@media (max-width: 900px) {
+  .glance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .finding-parts { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .glance-grid { grid-template-columns: 1fr; }
+  .report-card { padding: 18px 16px; }
+}

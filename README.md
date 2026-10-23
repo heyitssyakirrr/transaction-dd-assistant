@@ -61,7 +61,15 @@ shows each report on the page as soon as it is ready; Previous / Next moves betw
 cannot be read shows why, and the others still run.
 
 Reports are saved in `data/reports` as `.html` (open from the results page) and `.json` (for the
-production UI). Batches are kept in memory, so the results page of a batch is gone after a restart; the
+production UI).
+
+**The log.** `data/logs/transaction_review.log` (`LOG_DIRECTORY`), a new file each day, kept
+`LOG_RETENTION_DAYS` days. Each line names the account file in brackets, so reviews running at the same time
+can be told apart. Per review it shows: each AI request (sizes only) and answer (finish reason, tokens),
+blocked or cut-off calls and their retry, each tool use, what was not done, the checks' issues, and where the
+report was saved. When a report says a step failed, search the log for the file name. To see what a blocked
+request contained, set `LLM_SAVE_BLOCKED_REQUESTS=true` (it writes transaction rows to disk: only while
+investigating). Batches are kept in memory, so the results page of a batch is gone after a restart; the
 saved reports are not.
 
 ## Files
@@ -96,6 +104,7 @@ app/
 | `app/web/routes.py` | The web page's API: upload, folder, batch status, reports |
 | `app/web/templates/`, `app/web/static/` | The upload and results pages, their scripts and styles |
 | `app/config.py` | Settings from `.env` |
+| `app/logging_config.py` | The app log: console and a daily file in `LOG_DIRECTORY` |
 | `app/service.py`, `app/main.py`, `app/cli.py` | Reviewing and saving one account; web app; command line |
 
 ## To do with the senior

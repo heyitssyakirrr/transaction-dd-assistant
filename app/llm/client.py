@@ -67,6 +67,10 @@ class FoundryClient:
             body["tools"] = tools
             if must_answer:
                 body["tool_choice"] = "none"
+        # Sizes only, never the content: enough to see what was sent when a call is blocked or cut off.
+        logger.info("AI request: call=%s messages=%d characters=%d max_tokens=%d tools=%s", name, len(messages),
+                    sum(len(str(m.get("content") or "")) for m in messages), body["max_tokens"],
+                    "none" if not tools else "must answer" if must_answer else len(tools))
         payload = await self._post(name, body)
 
         choice = (payload.get("choices") or [{}])[0]
@@ -131,6 +135,8 @@ class FoundryClient:
         """Keep a blocked request to investigate (LLM_SAVE_BLOCKED_REQUESTS=true only). It holds transaction
         rows, never the headers."""
         if not self._settings.llm_save_blocked_requests:
+            logger.warning("Blocked request not saved: call=%s (set LLM_SAVE_BLOCKED_REQUESTS=true to keep it in "
+                           "LOG_DIRECTORY/blocked_requests and see what was sent)", name)
             return
         try:
             folder = self._settings.log_directory / "blocked_requests"

@@ -111,6 +111,7 @@ class BatchRunner:
                 item.report_id = await self._review(item)
                 item.status, item.content = "done", None
             except FileProblem as exc:
+                logger.warning("File could not be reviewed: file=%s problem=%s", item.file_name, exc)
                 item.fail(str(exc))
             except Exception:  # one bad file must not stop the rest of the batch; the details are in the log
                 logger.exception("Review failed: file=%s", item.file_name)

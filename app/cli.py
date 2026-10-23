@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import logging
 from pathlib import Path
 
 from app.account.ingest import FileError
 from app.config import Settings
+from app.logging_config import setup_logging
 from app.service import ReviewService
 
 
@@ -20,8 +20,8 @@ async def main() -> None:
     parser = argparse.ArgumentParser(description="Review one account's transactions.")
     parser.add_argument("file", type=Path, help="one account's transactions: CSV, TSV or Parquet")
     args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     settings = Settings()
+    setup_logging(settings.log_directory, settings.log_retention_days)
     if not settings.llm_base_url:
         raise SystemExit("LLM_BASE_URL is not set: copy .env.example to .env and fill in the Foundry settings.")
     service = ReviewService(settings)

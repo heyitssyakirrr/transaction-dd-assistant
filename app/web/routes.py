@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -21,6 +22,8 @@ from app.account.ingest import FileError, read_bytes, read_file
 from app.config import Settings
 from app.service import ReviewService
 from app.web.batches import Batch, BatchFile, BatchRunner, FileProblem
+
+logger = logging.getLogger("app.web.routes")
 
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
 FILE_TYPES = (".csv", ".tsv", ".txt", ".parquet")
@@ -101,6 +104,7 @@ def build_router(runner: BatchRunner, settings: Settings) -> APIRouter:
             data = await upload.read(MAX_UPLOAD_BYTES + 1)
             item = BatchFile(upload.filename or "upload.csv", content=data)
             if problem := upload_problem(item.file_name, len(data)):
+                logger.warning("Upload refused: file=%s problem=%s", item.file_name, problem)
                 item.fail(problem)   # shown on its page; the other files still run
             items.append(item)
         return runner.submit(items, "upload").as_dict()

@@ -101,6 +101,7 @@ class Settings:
     # --- Files ----------------------------------------------------------------------------------
     report_directory: Path = _path("REPORT_DIRECTORY", "data/reports")
     log_directory: Path = _path("LOG_DIRECTORY", "data/logs")
+    log_retention_days: int = _int("LOG_RETENTION_DAYS", 30)   # daily log files kept
 
     def __post_init__(self) -> None:
         must_be_positive = {
@@ -112,7 +113,7 @@ class Settings:
             "SUMMARY_REVIEW_TOKENS": self.summary_review_tokens, "COMBINE_TOKENS": self.combine_tokens,
             "CHECK_TOKENS": self.check_tokens, "DECIDE_TOKENS": self.decide_tokens,
             "BATCH_ACCOUNT_CONCURRENCY": self.batch_account_concurrency, "BATCH_MAX_FILES": self.batch_max_files,
-            "BATCH_KEEP_RECENT": self.batch_keep_recent,
+            "BATCH_KEEP_RECENT": self.batch_keep_recent, "LOG_RETENTION_DAYS": self.log_retention_days,
         }
         wrong = [name for name, value in must_be_positive.items() if value <= 0]
         if wrong:
