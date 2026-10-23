@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Review results &middot; Transaction Due-Diligence Workspace</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">P</span>
+      <span class="brand-text">
+        <span class="brand-name">Public Bank Berhad</span>
+        <span class="brand-sub">Transaction Due-Diligence</span>
+      </span>
+    </div>
+    <a class="topbar-link" href="/">&larr; New review</a>
+  </header>
+
+  <main class="results-page">
+    <nav id="batch-bar" class="batch-bar hidden" aria-label="Reports in this batch">
+      <button id="prev-report" class="pager-button" type="button">&larr; Previous</button>
+      <div class="batch-position">
+        <strong id="batch-position"></strong>
+        <span id="batch-file" class="batch-file"></span>
+        <span id="batch-file-status" class="file-status"></span>
+      </div>
+      <button id="next-report" class="pager-button" type="button">Next &rarr;</button>
+    </nav>
+    <p id="batch-progress" class="batch-progress hidden"></p>
+
+    <div id="placeholder" class="results-empty">
+      <p id="placeholder-text">No review is loaded. Upload account files to start one.</p>
+      <a id="placeholder-link" class="report-link" href="/">Go to upload</a>
+    </div>
+
+    <!-- One report, drawn by /static/results.js from the report's JSON. -->
+    <div id="report" class="hidden"></div>
+  </main>
+
+  <script src="/static/results.js"></script>
+</body>
+</html>

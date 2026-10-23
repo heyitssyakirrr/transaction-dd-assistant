@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Transaction Due-Diligence Workspace</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">P</span>
+      <span class="brand-text">
+        <span class="brand-name">Public Bank Berhad</span>
+        <span class="brand-sub">Transaction Due-Diligence</span>
+      </span>
+    </div>
+    <span class="environment">UAT</span>
+  </header>
+
+  <main class="upload-page">
+    <section class="upload-hero">
+      <p class="eyebrow">Transaction review</p>
+      <h1>Review an account's transactions with <em>clarity and confidence</em></h1>
+      <p class="upload-hero-lead">
+        Upload one file per account, or read accounts straight from the server folder. The AI looks for
+        money-laundering patterns in the transactions, checks each one against the rows, and writes a report
+        that says what to verify first. Accounts are reviewed a few at a time, in order, and you can page
+        through each report as soon as it is ready.
+      </p>
+    </section>
+
+    <section class="card upload-card">
+      <div class="upload-card-head">
+        <p class="eyebrow">New review</p>
+        <h2>Choose the accounts</h2>
+      </div>
+
+      <div id="source-switch" class="source-switch hidden" role="tablist" aria-label="Where the accounts come from">
+        <button type="button" class="source-option is-active" role="tab" aria-selected="true" data-source="upload">Upload files</button>
+        <button type="button" class="source-option" role="tab" aria-selected="false" data-source="folder">Read from folder</button>
+      </div>
+
+      <form id="folder-form" class="hidden">
+        <div id="folder-loading" class="loading">
+          <span class="spinner" aria-hidden="true"></span>
+          <span>Reading the folder&hellip;</span>
+        </div>
+        <div id="folder-panel" class="folder-panel hidden">
+          <div class="folder-facts">
+            <div><span>Folder</span><strong id="folder-path"></strong></div>
+            <div><span>Account files</span><strong id="folder-total"></strong></div>
+          </div>
+
+          <div class="range-fields">
+            <label class="number-field" for="range-start">
+              <span>From file</span>
+              <input id="range-start" type="number" min="1" step="1" inputmode="numeric" value="1">
+            </label>
+            <span class="range-to" aria-hidden="true">to</span>
+            <label class="number-field" for="range-end">
+              <span>To file</span>
+              <input id="range-end" type="number" min="1" step="1" inputmode="numeric">
+            </label>
+          </div>
+          <p id="count-hint" class="field-hint"></p>
+        </div>
+
+        <div id="folder-error" class="error hidden" role="alert"></div>
+        <button id="folder-submit" type="submit" disabled>
+          <span id="folder-submit-label">Start review</span>
+          <span aria-hidden="true">&rarr;</span>
+        </button>
+      </form>
+
+      <form id="upload-form">
+        <label id="file-field" class="file-field" for="file">
+          <span class="file-field-icon" aria-hidden="true">&uarr;</span>
+          <span id="file-name" class="file-field-title">Drop account files here</span>
+          <span class="file-field-hint">or click to browse &middot; one CSV, TSV or Parquet file per account, up to 30 MB each</span>
+          <input id="file" type="file" accept=".csv,.tsv,.txt,.parquet" multiple required>
+        </label>
+
+        <p class="upload-note">
+          One account's transactions, one year or less. The columns used are TXN_DATE, TRANSACTION_SEQ_NO,
+          CREDIT_DEBIT_CODE and AMOUNT. Every other column in the file is ignored and never sent to the AI.
+        </p>
+
+        <ul id="file-list" class="file-list hidden"></ul>
+
+        <div id="error" class="error hidden" role="alert"></div>
+        <div id="loading" class="loading hidden">
+          <span class="spinner" aria-hidden="true"></span>
+          <span>Uploading and queuing the files&hellip;</span>
+        </div>
+
+        <button id="submit-button" type="submit">
+          <span id="submit-button-label">Start review</span>
+          <span aria-hidden="true">&rarr;</span>
+        </button>
+      </form>
+
+      <p class="upload-footnote">
+        Decision support only &mdash; the analyst decides what action to take.
+      </p>
+    </section>
+  </main>
+
+  <script src="/static/upload.js"></script>
+  <script src="/static/folder.js"></script>
+</body>
+</html>

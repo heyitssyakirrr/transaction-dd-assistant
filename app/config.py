@@ -1,6 +1,7 @@
 """All settings, read once from .env (values already in the environment win).
 
-Three groups: the AI Foundry connection, the review (groups, checks, tools, answer sizes), and files.
+Four groups: the AI Foundry connection, the review (groups, checks, tools, answer sizes), the web page, and
+files.
 """
 from __future__ import annotations
 
@@ -87,6 +88,16 @@ class Settings:
     check_tokens: int = _int("CHECK_TOKENS", 1500)
     decide_tokens: int = _int("DECIDE_TOKENS", 4000)
 
+    # --- The web page ---------------------------------------------------------------------------
+    # Accounts reviewed at the same time; their AI calls share LLM_CONCURRENCY.
+    batch_account_concurrency: int = _int("BATCH_ACCOUNT_CONCURRENCY", 3)
+    # Most files in one upload, and finished batches kept for the results page.
+    batch_max_files: int = _int("BATCH_MAX_FILES", 20)
+    batch_keep_recent: int = _int("BATCH_KEEP_RECENT", 20)
+    # "Read from folder": a server folder of account files (CSV, TSV or Parquet; one account per file).
+    # Blank hides the option.
+    account_folder: Path | None = _path("ACCOUNT_FOLDER_PATH", "") if _env("ACCOUNT_FOLDER_PATH", "") else None
+
     # --- Files ----------------------------------------------------------------------------------
     report_directory: Path = _path("REPORT_DIRECTORY", "data/reports")
     log_directory: Path = _path("LOG_DIRECTORY", "data/logs")
@@ -100,6 +111,8 @@ class Settings:
             "TOOL_MAX_ROWS": self.tool_max_rows, "READ_TOKENS": self.read_tokens,
             "SUMMARY_REVIEW_TOKENS": self.summary_review_tokens, "COMBINE_TOKENS": self.combine_tokens,
             "CHECK_TOKENS": self.check_tokens, "DECIDE_TOKENS": self.decide_tokens,
+            "BATCH_ACCOUNT_CONCURRENCY": self.batch_account_concurrency, "BATCH_MAX_FILES": self.batch_max_files,
+            "BATCH_KEEP_RECENT": self.batch_keep_recent,
         }
         wrong = [name for name, value in must_be_positive.items() if value <= 0]
         if wrong:

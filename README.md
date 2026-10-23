@@ -50,11 +50,19 @@ if it still fails, the report says what was not done.
 pip install -r requirements.txt
 cp .env.example .env               # fill in LLM_BASE_URL and HELPER_ID
 
-python -m app.cli path/to/account.csv     # one review; prints where the report was saved
 python -m app.main                        # web page on http://127.0.0.1:5000
+python -m app.cli path/to/account.csv     # one review from the command line, for quick checks
 ```
 
-Reports are saved in `data/reports` as `.html` (for the analyst) and `.json` (for the production UI).
+**The web page.** Upload one or more account files, or choose "Read from folder" and a range of files
+(by file name) from the server folder in `ACCOUNT_FOLDER_PATH` (blank hides the option). Accounts are
+reviewed `BATCH_ACCOUNT_CONCURRENCY` at a time, in order. The results page follows their progress and
+shows each report on the page as soon as it is ready; Previous / Next moves between them. A file that
+cannot be read shows why, and the others still run.
+
+Reports are saved in `data/reports` as `.html` (open from the results page) and `.json` (for the
+production UI). Batches are kept in memory, so the results page of a batch is gone after a restart; the
+saved reports are not.
 
 ## Files
 
@@ -62,11 +70,12 @@ Reports are saved in `data/reports` as `.html` (for the analyst) and `.json` (fo
 app/
   config.py                 settings from .env
   service.py                file -> review -> saved report (used by both entry points)
-  cli.py, main.py           command line and web page
+  main.py, cli.py           web page and command line
   account/                  the rows: read the file and compute exact figures
   review/                   the five AI steps, their tools, and the checks on the AI's text
   llm/                      talking to AI Foundry
   report/                   the analyst's report as JSON and HTML
+  web/                      the web page: batches, folder, API, pages, scripts and styles
 ```
 
 | File | What it does |
@@ -83,8 +92,11 @@ app/
 | `app/llm/ask.py` | One AI call: tool rounds, the one retry, the call record |
 | `app/report/builder.py` | Builds the report from a finished review |
 | `app/report/model.py`, `app/report/html.py` | The report as data (JSON) and as a page (HTML) |
+| `app/web/batches.py` | Batches of accounts, reviewed a few at a time, in order |
+| `app/web/routes.py` | The web page's API: upload, folder, batch status, reports |
+| `app/web/templates/`, `app/web/static/` | The upload and results pages, their scripts and styles |
 | `app/config.py` | Settings from `.env` |
-| `app/service.py`, `app/cli.py`, `app/main.py` | Saving reports, command line, web page |
+| `app/service.py`, `app/main.py`, `app/cli.py` | Reviewing and saving one account; web app; command line |
 
 ## To do with the senior
 

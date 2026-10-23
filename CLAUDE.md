@@ -76,8 +76,8 @@ analyst what to investigate next. The AI is gpt-6-luna on the bank's AI Foundry.
 
 ## Files
 
-Four folders, one job each. Imports go one way: `report` uses `review`, `review` uses `account` and `llm`,
-`account` uses nothing else in the app.
+Five folders, one job each. Imports go one way: `web` uses `service`, `report` uses `review`, `review` uses
+`account` and `llm`, `account` uses nothing else in the app.
 
 | File | Job |
 |---|---|
@@ -98,6 +98,10 @@ Four folders, one job each. Imports go one way: `report` uses `review`, `review`
 | **`app/report/`** | **The analyst's report** |
 | `app/report/builder.py` | Builds the report from a finished review |
 | `app/report/model.py`, `app/report/html.py` | The report as JSON and as the HTML page |
+| **`app/web/`** | **The web page (the main way to use the tool), styled like the 12-month project** |
+| `app/web/batches.py` | Batches: uploaded or folder files, `BATCH_ACCOUNT_CONCURRENCY` accounts at a time |
+| `app/web/routes.py` | JSON API: upload, folder (`ACCOUNT_FOLDER_PATH`), batch status, reports |
+| `app/web/templates/`, `app/web/static/` | Upload and results pages; `results.js` draws the report from its JSON |
 
 ## Status (23 Oct 2026)
 
@@ -110,7 +114,8 @@ Four folders, one job each. Imports go one way: `report` uses `review`, `review`
 
 ## Next steps
 
-1. Run real accounts: `python -m app.cli "path\to\account.csv"`. Read the Processing section first.
+1. Run real accounts on the web page (`python -m app.main`, upload or "Read from folder"). Read the
+   Processing section first.
 2. Compare with 5 to 10 accounts that analysts have already investigated: what did it find, what did it
    miss, would "What to verify first" help them?
 3. Run 2 or 3 accounts twice, to see whether the risk level stays the same.
