@@ -16,7 +16,7 @@ analyst what to investigate next. The AI is gpt-6-luna on the bank's AI Foundry.
 ## Rules
 
 1. **Only 4 columns are used:** TXN_DATE, TRANSACTION_SEQ_NO, CREDIT_DEBIT_CODE, AMOUNT. Every other
-   column in the file is ignored when it is read (`app/ingest.py`). Do not read, show or send any other
+   column in the file is ignored when it is read (`app/account/ingest.py`). Do not read, show or send any other
    column.
 2. **Don't invent what we don't have:** no code-mapping files or lookups, and no feature, setting or file
    the user did not ask for. If something seems missing, ask first.
@@ -76,20 +76,28 @@ analyst what to investigate next. The AI is gpt-6-luna on the bank's AI Foundry.
 
 ## Files
 
+Four folders, one job each. Imports go one way: `report` uses `review`, `review` uses `account` and `llm`,
+`account` uses nothing else in the app.
+
 | File | Job |
 |---|---|
-| `app/columns.py` | The 4 column names |
 | `app/config.py` | Settings from `.env` |
-| `app/ingest.py` | Read the file, check rows, sort, number T1…Tn |
-| `app/summary.py` | Row format, totals, the summary, groups, the rows each Check sees |
-| `app/tools.py` | The 7 tools |
-| `app/glossary.py` | Patterns, what the data cannot show, draft risk levels, writing rules |
-| `app/stages/*.py` | One file per AI step: prompt, input, answer shape |
-| `app/pipeline.py` | Runs the steps |
+| `app/service.py`, `app/cli.py`, `app/main.py` | Save reports; command line; web page (the entry points) |
+| **`app/account/`** | **The rows: read the file and compute exact figures** |
+| `app/account/columns.py` | The 4 column names |
+| `app/account/ingest.py` | Read the file, check rows, sort, number T1…Tn |
+| `app/account/summary.py` | Row format, totals, the summary, groups, the rows each Check sees |
+| **`app/review/`** | **The five AI steps** |
+| `app/review/pipeline.py` | Runs the steps |
+| `app/review/stages/*.py` | One file per AI step: prompt, input, answer shape |
+| `app/review/glossary.py` | Patterns, what the data cannot show, draft risk levels, writing rules |
+| `app/review/tools.py` | The 7 tools |
+| `app/review/checks.py` | Checks on the AI's text: IDs, RM amounts, dates |
+| **`app/llm/`** | **Talking to Foundry** |
 | `app/llm/client.py`, `app/llm/ask.py` | One Foundry request; one AI call with tool rounds and the retry |
-| `app/checks.py`, `app/report_builder.py` | Checks, and building the report |
-| `app/report.py`, `app/report_html.py` | The report as JSON and as the HTML page |
-| `app/service.py`, `app/cli.py`, `app/main.py` | Save reports; command line; web page |
+| **`app/report/`** | **The analyst's report** |
+| `app/report/builder.py` | Builds the report from a finished review |
+| `app/report/model.py`, `app/report/html.py` | The report as JSON and as the HTML page |
 
 ## Status (23 Oct 2026)
 
@@ -106,11 +114,11 @@ analyst what to investigate next. The AI is gpt-6-luna on the bank's AI Foundry.
 2. Compare with 5 to 10 accounts that analysts have already investigated: what did it find, what did it
    miss, would "What to verify first" help them?
 3. Run 2 or 3 accounts twice, to see whether the risk level stays the same.
-4. Improve the prompts (`app/stages/`, `app/glossary.py`) based on what fails.
+4. Improve the prompts (`app/review/stages/`, `app/review/glossary.py`) based on what fails.
 
 ## Open questions for the senior
 
-1. The AML team's risk definitions, to replace the draft in `app/glossary.py`.
+1. The AML team's risk definitions, to replace the draft in `app/review/glossary.py`.
 2. Is the RM 25,000 cash reporting limit right? The AI cannot see cash, so that check is on amounts only.
 3. Does the real TXN_DATE have a time of day? The code handles both.
 4. Later: could a transaction *type* (cash or transfer) be sent to the AI once a mapping exists? It would

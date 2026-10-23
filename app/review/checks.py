@@ -11,7 +11,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Iterable
 
-from app.ingest import Txn
+from app.account.ingest import Txn
 
 _AMOUNT = re.compile(r"RM\s?([0-9][0-9,]*(?:\.[0-9]{1,2})?)", re.IGNORECASE)
 _ISO_DATE = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")

@@ -12,7 +12,7 @@ from __future__ import annotations
 from decimal import Decimal
 from html import escape
 
-from app.report import Figures, FindingCard, Report, TxnRow
+from app.report.model import Figures, FindingCard, Report, TxnRow
 
 _RISK_COLOURS = {"high": "#b42318", "medium": "#b54708", "low": "#067647", "not_assessed": "#475467"}
 _STATUS = {"found": "Found", "not_found": "Not found", "cannot_check": "Cannot check", "not_reported": "Not reported"}

@@ -1,5 +1,5 @@
 """The report the analyst receives, as data. It is saved as JSON (for the production UI) and drawn as an
-HTML page by app/report_html.py.
+HTML page by app/report/html.py.
 
 Two kinds of content, never mixed: what the AI wrote (shown as written), and what the code computed
 (exact figures, and the transactions behind each finding).
@@ -12,8 +12,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.ingest import Account, Txn
-from app.summary import Totals
+from app.account.ingest import Account, Txn
+from app.account.summary import Totals
 
 
 class TxnRow(BaseModel):

@@ -20,24 +20,24 @@ import logging
 import time
 from dataclasses import dataclass, field
 
-from app import checks
+from app.account.ingest import Account
+from app.account.summary import Group, check_rows, monthly_totals, split_into_groups, summary, totals
 from app.config import Settings
-from app.glossary import TITLES, cannot_check, checkable
-from app.ingest import Account
 from app.llm.ask import Asker, CallFailed, CallRecord
-from app.stages import check, combine, decide, read, summary_review
-from app.stages.combine import Suspected
-from app.stages.decide import Finding, Rejected
-from app.summary import Group, check_rows, monthly_totals, split_into_groups, summary, totals
-from app.tools import Toolbox
+from app.review import checks
+from app.review.glossary import TITLES, cannot_check, checkable
+from app.review.stages import check, combine, decide, read, summary_review
+from app.review.stages.combine import Suspected
+from app.review.stages.decide import Finding, Rejected
+from app.review.tools import Toolbox
 
-logger = logging.getLogger("app.pipeline")
+logger = logging.getLogger("app.review.pipeline")
 _STRENGTH_ORDER = {"strong": 0, "moderate": 1, "weak": 2}
 
 
 @dataclass
 class Review:
-    """Everything one account's review produced; app/report_builder.py turns it into the report."""
+    """Everything one account's review produced; app/report/builder.py turns it into the report."""
     account: Account
     groups: list[Group]
     summary: str                                   # the summary text the AI was given

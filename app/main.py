@@ -19,8 +19,8 @@ from html import escape
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
+from app.account.ingest import FileError, read_bytes
 from app.config import Settings
-from app.ingest import FileError, read_bytes
 from app.service import ReviewService
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")

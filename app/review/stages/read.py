@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from pydantic import Field
 
-from app.glossary import HOUSE_RULES, pattern_list
-from app.ingest import Account
-from app.stages.common import Answer, Ids, PatternKey, Strength, Text, answer_format
-from app.summary import Group, row_legend, rows_block
+from app.account.ingest import Account
+from app.account.summary import Group, row_legend, rows_block
+from app.review.glossary import HOUSE_RULES, pattern_list
+from app.review.stages.common import Answer, Ids, PatternKey, Strength, Text, answer_format
 
 
 def system_prompt(has_time: bool) -> str:

@@ -1,2 +1,1 @@
-"""Reusable LLM-assisted analysis package."""
-
+"""Transaction review assistant: one account's transactions in, an AML analyst's report out."""

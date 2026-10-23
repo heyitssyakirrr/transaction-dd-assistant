@@ -18,7 +18,7 @@ One account per file (CSV, TSV or Parquet). Only four columns are used:
 | CREDIT_DEBIT_CODE | C = money in, D = money out |
 | AMOUNT | Amount in RM |
 
-Every other column is ignored. The names are set in `app/columns.py`.
+Every other column is ignored. The names are set in `app/account/columns.py`.
 
 ## How a review works
 
@@ -58,24 +58,36 @@ Reports are saved in `data/reports` as `.html` (for the analyst) and `.json` (fo
 
 ## Files
 
+```
+app/
+  config.py                 settings from .env
+  service.py                file -> review -> saved report (used by both entry points)
+  cli.py, main.py           command line and web page
+  account/                  the rows: read the file and compute exact figures
+  review/                   the five AI steps, their tools, and the checks on the AI's text
+  llm/                      talking to AI Foundry
+  report/                   the analyst's report as JSON and HTML
+```
+
 | File | What it does |
 |---|---|
-| `app/columns.py` | The four column names |
-| `app/config.py` | Settings from `.env` |
-| `app/ingest.py` | Reads the file, checks every row, sorts, labels T1…Tn |
-| `app/summary.py` | Row format, exact totals, the summary, groups, the rows each Check sees |
-| `app/tools.py` | The seven tools |
-| `app/glossary.py` | The patterns, what the data cannot show, risk levels (draft), writing rules |
-| `app/stages/` | One file per AI step: `read`, `summary_review`, `combine`, `check`, `decide` |
-| `app/pipeline.py` | Runs the steps for one account |
+| `app/account/columns.py` | The four column names |
+| `app/account/ingest.py` | Reads the file, checks every row, sorts, labels T1…Tn |
+| `app/account/summary.py` | Row format, exact totals, the summary, groups, the rows each Check sees |
+| `app/review/pipeline.py` | Runs the steps for one account |
+| `app/review/stages/` | One file per AI step: `read`, `summary_review`, `combine`, `check`, `decide` |
+| `app/review/glossary.py` | The patterns, what the data cannot show, risk levels (draft), writing rules |
+| `app/review/tools.py` | The seven tools |
+| `app/review/checks.py` | Checks on the AI's text: transaction IDs, RM amounts, dates |
 | `app/llm/client.py` | One request to AI Foundry |
 | `app/llm/ask.py` | One AI call: tool rounds, the one retry, the call record |
-| `app/checks.py`, `app/report_builder.py` | Checks on the AI's text, and building the report |
-| `app/report.py`, `app/report_html.py` | The report as data (JSON) and as a page (HTML) |
+| `app/report/builder.py` | Builds the report from a finished review |
+| `app/report/model.py`, `app/report/html.py` | The report as data (JSON) and as a page (HTML) |
+| `app/config.py` | Settings from `.env` |
 | `app/service.py`, `app/cli.py`, `app/main.py` | Saving reports, command line, web page |
 
 ## To do with the senior
 
-1. Replace the draft risk levels in `app/glossary.py` with the AML team's.
+1. Replace the draft risk levels in `app/review/glossary.py` with the AML team's.
 2. Confirm the RM 25,000 cash reporting limit (`CASH_REPORT_LIMIT`).
 3. Confirm whether TXN_DATE has a time of day (both work).

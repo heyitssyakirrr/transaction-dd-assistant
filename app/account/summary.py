@@ -18,8 +18,8 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Iterable
 
+from app.account.ingest import Account, Txn
 from app.config import Settings
-from app.ingest import Account, Txn
 
 ZERO = Decimal("0.00")
 

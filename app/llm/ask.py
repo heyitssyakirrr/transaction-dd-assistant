@@ -25,7 +25,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.config import Settings
 from app.llm.client import Blocked, CutOff, FoundryClient, LlmError, Reply, first_json_object
-from app.tools import Toolbox
+from app.review.tools import Toolbox
 
 logger = logging.getLogger("app.llm")
 Answer = TypeVar("Answer", bound=BaseModel)

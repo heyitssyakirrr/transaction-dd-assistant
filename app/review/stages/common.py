@@ -7,7 +7,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict
 
-from app.glossary import FINDING_KEYS
+from app.review.glossary import FINDING_KEYS
 
 _ID_OR_RANGE = re.compile(r"T(\d+)(?:\s*(?:-|–|to)\s*T?(\d+))?")
 

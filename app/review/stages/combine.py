@@ -5,10 +5,10 @@ from __future__ import annotations
 
 from pydantic import Field
 
-from app.glossary import HOUSE_RULES, pattern_list
-from app.stages.common import Answer, Ids, PatternKey, Text, answer_format
-from app.stages.read import ReadNotes
-from app.stages.summary_review import SummaryNotes
+from app.review.glossary import HOUSE_RULES, pattern_list
+from app.review.stages.common import Answer, Ids, PatternKey, Text, answer_format
+from app.review.stages.read import ReadNotes
+from app.review.stages.summary_review import SummaryNotes
 
 
 def system_prompt(has_time: bool, max_patterns: int) -> str:

@@ -11,8 +11,8 @@ import asyncio
 import logging
 from pathlib import Path
 
+from app.account.ingest import FileError
 from app.config import Settings
-from app.ingest import FileError
 from app.service import ReviewService
 
 

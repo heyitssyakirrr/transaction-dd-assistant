@@ -6,14 +6,14 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.account.ingest import Account, read_bytes
 from app.config import Settings
-from app.ingest import Account, read_bytes
 from app.llm.ask import Asker
 from app.llm.client import FoundryClient
-from app.pipeline import Pipeline
-from app.report import Report
-from app.report_builder import build_report
-from app.report_html import render
+from app.report.builder import build_report
+from app.report.html import render
+from app.report.model import Report
+from app.review.pipeline import Pipeline
 
 logger = logging.getLogger("app.service")
 

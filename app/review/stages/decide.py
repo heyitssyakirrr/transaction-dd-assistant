@@ -8,10 +8,10 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
-from app.glossary import HOUSE_RULES, RISK_DEFINITIONS, TITLES, Limit, Pattern, pattern_list
-from app.stages.check import CheckResult
-from app.stages.common import Answer, FindingIds, Ids, Lower, Strength, Text, answer_format
-from app.summary import Totals, rm
+from app.account.summary import Totals, rm
+from app.review.glossary import HOUSE_RULES, RISK_DEFINITIONS, TITLES, Limit, Pattern, pattern_list
+from app.review.stages.check import CheckResult
+from app.review.stages.common import Answer, FindingIds, Ids, Lower, Strength, Text, answer_format
 
 
 def system_prompt(has_time: bool) -> str:

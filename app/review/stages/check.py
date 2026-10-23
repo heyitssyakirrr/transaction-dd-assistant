@@ -3,11 +3,11 @@ real rows around the pattern, asks the tools for exact figures, and confirms or 
 innocent explanation too."""
 from __future__ import annotations
 
-from app.glossary import HOUSE_RULES, pattern_list
-from app.ingest import Account, Txn
-from app.stages.combine import Suspected
-from app.stages.common import Answer, Ids, PatternKey, Strength, Text, answer_format
-from app.summary import row_legend, rows_block
+from app.account.ingest import Account, Txn
+from app.account.summary import row_legend, rows_block
+from app.review.glossary import HOUSE_RULES, pattern_list
+from app.review.stages.combine import Suspected
+from app.review.stages.common import Answer, Ids, PatternKey, Strength, Text, answer_format
 
 
 def system_prompt(has_time: bool) -> str:

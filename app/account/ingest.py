@@ -1,6 +1,6 @@
 """Read one account's transactions from a CSV, TSV or Parquet file.
 
-Only the four columns in app/columns.py are read. Every row is checked, blank lines are skipped, the
+Only the four columns in app/account/columns.py are read. Every row is checked, blank lines are skipped, the
 rows are sorted by date then sequence number, and each gets a short label (T1, T2, ...) that the AI
 uses to point at it. Reading only: nothing here judges the transactions.
 """
@@ -14,7 +14,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Iterable
 
-from app.columns import COLUMNS
+from app.account.columns import COLUMNS
 
 # Day first (DD/MM/YYYY), as the bank's extract writes dates; ISO dates are accepted too.
 _DATE_FORMATS = (

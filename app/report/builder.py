@@ -12,14 +12,14 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from app import checks
+from app.account.ingest import Txn
+from app.account.summary import by_month, quiet_periods, totals
 from app.config import Settings
-from app.glossary import TITLES, cannot_check, checkable
-from app.ingest import Txn
-from app.pipeline import Review
-from app.report import (CallRow, ChecklistRow, Figures, FindingCard, Glance, MonthRow, RejectedRow, Report, ToolRow,
-                        TxnRow, VerifyItem)
-from app.summary import by_month, quiet_periods, totals
+from app.report.model import (CallRow, ChecklistRow, Figures, FindingCard, Glance, MonthRow, RejectedRow, Report,
+                              ToolRow, TxnRow, VerifyItem)
+from app.review import checks
+from app.review.glossary import TITLES, cannot_check, checkable
+from app.review.pipeline import Review
 
 FOUR_COLUMNS = ("Only four columns were used: date, sequence number, direction (in or out) and amount. Every other "
                 "column in the file was ignored.")
